@@ -1,2 +1,8 @@
 (Block [(Ass (Id "x") (IntConst 1))
-        (Return (IntConst 0))])
+        (Return (IntConst 0))])name: s return type: STRUCT width: 4 offset: 0 symbolTable: 
+name: y return type: float width: 4 offset: 0 is_param: 0
+name: main return type: int width: 32 offset: 0 symbolTable: 
+name: argc return type: int width: 4 offset: -4 is_param: 1
+name: x return type: int* width: 4 offset: 0 is_param: 0
+name: y return type: int* width: 4 offset: 4 is_param: 0
+name: x return type: int width: 20 offset: 28 is_param: 0

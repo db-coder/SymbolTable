@@ -16,14 +16,20 @@
 translation_unit 
         :  struct_specifier
  	| function_definition 
+ 	{
+ 		top->printTable();
+ 	}
  	| translation_unit function_definition 
+ 	{
+ 		top->printTable();
+ 	}
         | translation_unit struct_specifier
         ;
 
 struct_specifier 
         : { top_local = new symTab();}STRUCT IDENTIFIER '{' declaration_list '}' ';'
         { 
-			top->put($3,top->total_width(),0,"STRUCT",top_local);
+			top->put($3,top_local->total_width(),0,"STRUCT",top_local);
 		}
         ;
 
@@ -31,18 +37,18 @@ function_definition
 	: {top_local = new symTab();} type_specifier {ret = type; offset = 0;} fun_declarator 
 	{ 
 		int n = top_local->table.size();
-		(top_local->table[n-1])->offset = 0;
 		int w = (top_local->table[n-1])->width;
+		(top_local->table[n-1])->offset = -w;
 		for(int i=(top_local->table).size()-2;i>=0;i--)
 		{
-			(top_local->table[i])->offset = -w;
 			w+=(top_local->table[i])->width;
+			(top_local->table[i])->offset = -w;
 		}
 		offset = 0;
 	} 
 	compound_statement 
 	{ 
-		top->put(name,ret,top_local);
+		top->put(name_func,top_local->total_width(),0,ret,top_local);
 	}
 	;
 
@@ -68,11 +74,11 @@ type_specifier                   // This is the information
 fun_declarator
 	: IDENTIFIER '(' parameter_list ')' 
 	{
-		name = $1;
+		name_func = $1;
 	}
 	| IDENTIFIER '(' ')' 
 	{
-		name = $1;
+		name_func = $1;
 	}
         | '*' fun_declarator  //The * is associated with the 
         {
@@ -105,17 +111,21 @@ declarator
 	}
 	| declarator '[' primary_expression']' // check separately that it is a constant
 	{
-		// width*=$3.value;
+		width*=val;
 		offset+=width;
 	}
         | '*' declarator 
+        {
+        	type = type+"*";
+        	old_type = old_type+"*";
+        }
         ;
 
 primary_expression 
         : l_expression
         {$$ = $1;}
         | INT_CONSTANT
-        {$$ = new int_astnode($1);} 
+        {$$ = new int_astnode($1);val=$1;} 
         | FLOAT_CONSTANT
         {$$ = new float_astnode($1);}
         | STRING_LITERAL

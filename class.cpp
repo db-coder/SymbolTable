@@ -40,6 +40,13 @@ class symTab
 			sum+=table[i]->width;
 		return sum;
 	}
+	void print()
+	{
+		for (int i = 0; i < table.size(); ++i)
+		{
+			cout<<"name: "<<table[i]->name<<" return type: "<<table[i]->type<<" width: "<<table[i]->width<<" offset: "<<table[i]->offset<<" is_param: "<<table[i]->param<<endl;
+		}
+	}
 
 };
 class globalSymbol
@@ -86,20 +93,28 @@ class globalSymTab
 			sum+=table[i]->width;
 		return sum;
 	}
+	void printTable()
+	{
+		for (int i = 0; i < table.size(); ++i)
+		{
+			cout<<"name: "<<table[i]->name<<" return type: "<<table[i]->type<<" width: "<<table[i]->width<<" offset: "<<table[i]->offset<<" symbolTable: \n";
+			(table[i]->table)->print();
+		}
+	}
 };
 namespace
 {
 	globalSymTab *top = new globalSymTab();
 	symTab *top_local = new symTab();
-	string old_type,type,name,ret;
-	int old_width, width,offset;
+	string old_type,type,name,ret,name_func;
+	int old_width, width,offset,val;
 }
 
 class abstract_astnode
 {
 	public:
 		virtual int print (int ident) = 0;
-		virtual int value () = 0;
+		// virtual int value () = 0;
 		// virtual string generate_code(const symbolTable&) = 0;
 		// virtual basic_types getType() = 0;
 		// virtual bool checkTypeofAST() = 0;
