@@ -95,10 +95,19 @@ class globalSymTab
 	}
 	void printTable()
 	{
+		cout<<endl;
 		for (int i = 0; i < table.size(); ++i)
 		{
 			cout<<"name: "<<table[i]->name<<" return type: "<<table[i]->type<<" width: "<<table[i]->width<<" offset: "<<table[i]->offset<<" symbolTable: \n";
 			(table[i]->table)->print();
+		}
+	}
+	int struct_size(string s)
+	{
+		for (int i = 0; i < table.size(); ++i)
+		{
+			if(table[i]->name==s)
+				return (table[i]->table)->total_width();
 		}
 	}
 };

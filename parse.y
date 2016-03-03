@@ -17,13 +17,16 @@ translation_unit
         :  struct_specifier
  	| function_definition 
  	{
- 		top->printTable();
+ 		// top->printTable();
  	}
  	| translation_unit function_definition 
  	{
  		top->printTable();
  	}
         | translation_unit struct_specifier
+        {
+	 		top->printTable();
+	 	}
         ;
 
 struct_specifier 
@@ -69,6 +72,10 @@ type_specifier                   // This is the information
 		width  = old_width = 4;
 	} 
         | STRUCT IDENTIFIER 
+        {
+        	type = old_type = "struct "+$2;
+        	width = old_width = top->struct_size($2);
+        }
         ;
 
 fun_declarator
@@ -111,8 +118,12 @@ declarator
 	}
 	| declarator '[' primary_expression']' // check separately that it is a constant
 	{
+		if(val<0)
+		{
+			cerr<<"Array index should be a positive integer.\n";
+			ABORT();
+		}
 		width*=val;
-		offset+=width;
 	}
         | '*' declarator 
         {
@@ -127,9 +138,9 @@ primary_expression
         | INT_CONSTANT
         {$$ = new int_astnode($1);val=$1;} 
         | FLOAT_CONSTANT
-        {$$ = new float_astnode($1);}
+        {$$ = new float_astnode($1);val=-1;}
         | STRING_LITERAL
-        {$$ = new string_astnode($1);}
+        {$$ = new string_astnode($1);val=-1;}
         | '(' expression ')'
         {$$ = $2;} 
         ;
