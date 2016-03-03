@@ -1,0 +1,2 @@
+(Block [(Ass (Id "x") (IntConst 1))
+        (Return (IntConst 0))])
