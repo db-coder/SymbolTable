@@ -3,209 +3,213 @@
 #include <algorithm>
 #include <vector>
 #include <stack>
-using namespace std;
+#include <cstdlib>
 
+using namespace std;
 
 class type {
 	public:
 		string name;
 		type *t;
 };
+
 class array_type : public type
 {
-public:
-	int dim;
-	array_type(type *t1)
-	{
-		name = "array";
-		t = t1;
-	}
-	
+	public:
+		int dim;
+		array_type(type *t1)
+		{
+			name = "array";
+			t = t1;
+		}
 };
+
 class pointer_type : public type
 {
-public:
-	pointer_type(type *t1)
-	{
-		name = "pointer";
-		t = t1;
-	}
+	public:
+		pointer_type(type *t1)
+		{
+			name = "pointer";
+			t = t1;
+		}
 };	
 
 class base_type : public type
 {
-public:
-	base_type(string s)
-	{
-		name = s;
-		t = 0;
-	}
-
+	public:
+		base_type(string s)
+		{
+			name = s;
+			t = 0;
+		}
 };
 
-void equal(type *t1, type *t2)
-{
-	if(t1->name == "int" || t1->name == "float")
-	{
-		if(t2->name == "int" || t2->name == "float")
-		{
-			if(t1->name != t2->name)
-				cout << "Warning incompatible pointer types";
-
-		}
-	}
-	else if(t1->name == "pointer")
-	{
-		if(t2->name == "pointer" || t2->name == "array")
-			equal(t1->t,t2->t);
-	}
-	else if(t1->name == "array")
-	{
-		if(t2->name == "pointer" || t2->name == "array")
-			equal(t1->t,t2->t);	
-	}
-	else 
-	{
-		cerr << "Error : Imcompatible types" << endl;
-		ABORT();
-	}
-
-}
 class symbols
 {
 	public :
-	string name;
-	int width;
-	type* t;
-	int offset;
-	bool param;
-	symbols(string n, int w, int o, type* t1, bool p)
-	{
-		name = n;
-		width = w;
-		offset = o;
-		t = t1;
-		param = p;
-	}
-
+		string name;
+		int width;
+		type* t;
+		int offset;
+		bool param;
+		symbols(string n, int w, int o, type* t1, bool p)
+		{
+			name = n;
+			width = w;
+			offset = o;
+			t = t1;
+			param = p;
+		}
 };
+
 class symTab
 {
 	public:
-	vector <symbols*> table;
+		vector <symbols*> table;
 
-	void put(string n, int w, int o, type* t, bool p)
-	{
-		symbols * x = new symbols(n, w, o, t, p);
-		table.push_back(x);
-	}
-	int total_width()
-	{
-		int sum = 0;
-		for(int i = 0; i <table.size(); i++)
-			sum+=table[i]->width;
-		return sum;
-	}
-	void print()
-	{
-		for (int i = 0; i < table.size(); ++i)
+		void put(string n, int w, int o, type* t, bool p)
 		{
-			cout<<"name: "<<table[i]->name<<" return type: "<<table[i]->t<<" width: "<<table[i]->width<<" offset: "<<table[i]->offset<<" is_param: "<<table[i]->param<<endl;
+			symbols * x = new symbols(n, w, o, t, p);
+			table.push_back(x);
 		}
-	}
-	bool InScope(string s)
-	{
-		for (int i = 0; i < table.size(); ++i)
+		int total_width()
 		{
-			if(table[i]->name==s)
+			int sum = 0;
+			for(int i = 0; i <table.size(); i++)
+				sum+=table[i]->width;
+			return sum;
+		}
+		void print()
+		{
+			for (int i = 0; i < table.size(); ++i)
 			{
-				return true;
+				cout<<"name: "<<table[i]->name<<" return type: "<<table[i]->t<<" width: "<<table[i]->width<<" offset: "<<table[i]->offset<<" is_param: "<<table[i]->param<<endl;
 			}
 		}
-		return false;
-	}
-
+		bool InScope(string s)
+		{
+			for (int i = 0; i < table.size(); ++i)
+			{
+				if(table[i]->name==s)
+				{
+					return true;
+				}
+			}
+			return false;
+		}
 };
+
 class globalSymbol
 {
 	public :
-	int width;
-	string name;
-	type* t;
-	int offset;
-	symTab* table;
-	globalSymbol(string n, int w, int o, type* t1, symTab* tab)
-	{
-		name = n;
-		width = w;
-		offset = o;
-		t = t1;
-		table = tab;
-	}
-	globalSymbol(string n, type* t1, symTab* tab)
-	{
-		name = n;
-		t = t1;
-		table = tab;
-	}
+		int width;
+		string name;
+		type* t;
+		int offset;
+		symTab* table;
+		globalSymbol(string n, int w, int o, type* t1, symTab* tab)
+		{
+			name = n;
+			width = w;
+			offset = o;
+			t = t1;
+			table = tab;
+		}
+		globalSymbol(string n, type* t1, symTab* tab)
+		{
+			name = n;
+			t = t1;
+			table = tab;
+		}
 };
+
 class globalSymTab
 {
 	public:
-	vector <globalSymbol*> table;
-	void put(string n, int w, int o, type* t, symTab* tab)
-	{
-		globalSymbol * x = new globalSymbol(n, w, o, t, tab);
-		table.push_back(x);
-	}
-	void put(string n, type* t, symTab* tab)
-	{
-		globalSymbol * x = new globalSymbol(n, t, tab);
-		table.push_back(x);
-	}
-	int total_width()
-	{
-		int sum = 0;
-		for(int i = 0; i <table.size(); i++)
-			sum+=table[i]->width;
-		return sum;
-	}
-	void printTable()
-	{
-		cout<<endl;
-		for (int i = 0; i < table.size(); ++i)
+		vector <globalSymbol*> table;
+		void put(string n, int w, int o, type* t, symTab* tab)
 		{
-			cout<<"name: "<<table[i]->name<<" return type: "<<table[i]->t<<" width: "<<table[i]->width<<" offset: "<<table[i]->offset<<" symbolTable: \n";
-			(table[i]->table)->print();
+			globalSymbol * x = new globalSymbol(n, w, o, t, tab);
+			table.push_back(x);
 		}
-	}
-	int struct_size(string s)
-	{
-		for (int i = 0; i < table.size(); ++i)
+		void put(string n, type* t, symTab* tab)
 		{
-			if(table[i]->name==s)
-				return (table[i]->table)->total_width();
+			globalSymbol * x = new globalSymbol(n, t, tab);
+			table.push_back(x);
 		}
-	}
-	bool InScope(string s)
-	{
-		for (int i = 0; i < table.size(); ++i)
+		int total_width()
 		{
-			if(table[i]->name==s)
+			int sum = 0;
+			for(int i = 0; i <table.size(); i++)
+				sum+=table[i]->width;
+			return sum;
+		}
+		void printTable()
+		{
+			cout<<endl;
+			for (int i = 0; i < table.size(); ++i)
 			{
-				return true;
+				cout<<"name: "<<table[i]->name<<" return type: "<<table[i]->t<<" width: "<<table[i]->width<<" offset: "<<table[i]->offset<<" symbolTable: \n";
+				(table[i]->table)->print();
 			}
 		}
-		return false;
-	}
+		int struct_size(string s)
+		{
+			for (int i = 0; i < table.size(); ++i)
+			{
+				if(table[i]->name==s)
+					return (table[i]->table)->total_width();
+			}
+		}
+		bool InScope(string s)
+		{
+			for (int i = 0; i < table.size(); ++i)
+			{
+				if(table[i]->name==s)
+				{
+					return true;
+				}
+			}
+			return false;
+		}
 };
+
 namespace
 {
 	globalSymTab *top = new globalSymTab();
 	symTab *top_local = new symTab();
-	string old_type,name,ret,name_func;
+	string name,name_func;
 	type* type1;
+	type* old_type;
+	type* ret;
 	int old_width, width,offset,val;
+	void equal(type *t1, type *t2)
+	{
+		if(t1->name == "int" || t1->name == "float")
+		{
+			if(t2->name == "int" || t2->name == "float")
+			{
+				if(t1->name != t2->name)
+					cout << "Warning incompatible pointer types";
+
+			}
+		}
+		else if(t1->name == "pointer")
+		{
+			if(t2->name == "pointer" || t2->name == "array")
+				equal(t1->t,t2->t);
+		}
+		else if(t1->name == "array")
+		{
+			if(t2->name == "pointer" || t2->name == "array")
+				equal(t1->t,t2->t);	
+		}
+		else 
+		{
+			cerr << "Error : Imcompatible types" << endl;
+			abort();
+		}
+	}
 }
 
 class abstract_astnode
@@ -252,7 +256,7 @@ class unary_astnode : public exp_astnode
 				else
 				{
 					cerr<<"Invalid operator."<<endl;
-					ABORT();
+					abort();
 				}
 			}
 			else if(s=="&")
@@ -706,7 +710,7 @@ class id_astnode : public ref_astnode
 			if(top_local->InScope(name)==0)
 			{
 				cerr<<"Using variable without declaration."<<endl;
-				ABORT();
+				abort();
 			}
 		}
 
@@ -734,7 +738,7 @@ class member_astnode : public ref_astnode
 					if(((top->table)[i]->table)->InScope(mem->id_name)==0)
 					{
 						cerr<<"Variable is not a member of the struct."<<endl;
-						ABORT();
+						abort();
 					}
 				}
 			}
@@ -768,7 +772,7 @@ class arrow_astnode : public ref_astnode
 					if(((top->table)[i]->table)->InScope(mem->id_name)==0)
 					{
 						cerr<<"Variable is not a member of the struct."<<endl;
-						ABORT();
+						abort();
 					}
 				}
 			}

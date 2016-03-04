@@ -32,7 +32,7 @@ translation_unit
 struct_specifier 
         : { top_local = new symTab();}STRUCT IDENTIFIER '{' declaration_list '}' ';'
         { 
-			top->put($3,top_local->total_width(),0,"STRUCT",top_local);
+			top->put($3,top_local->total_width(),0,new base_type("STRUCT"),top_local);
 		}
         ;
 
@@ -58,22 +58,22 @@ function_definition
 type_specifier                   // This is the information 
         : VOID 	                 // that gets associated with each identifier
         { 
-        	type1 = old_type = "void";
+        	type1 = old_type = new base_type("void");
     	  	width = old_width = 0;
     	}
         | INT
         { 
-        	type1 = old_type = "int";
+        	type1 = old_type = new base_type("int");
     	  	width = old_width = 4;
     	}   
 	| FLOAT
 	{
-		type1  = old_type = "float";
+		type1  = old_type = new base_type("float");
 		width  = old_width = 4;
 	} 
         | STRUCT IDENTIFIER 
         {
-        	type1 = old_type = "struct "+$2;
+        	type1 = old_type = new base_type("struct "+$2);
         	width = old_width = top->struct_size($2);
         }
         ;
@@ -89,7 +89,7 @@ fun_declarator
 	}
         | '*' fun_declarator  //The * is associated with the 
         {
-        	ret = ret+"*";
+        	ret = new base_type(ret->name+"*");
         }
 	;                      //function name
 
@@ -127,14 +127,26 @@ declarator
 	}
         | '*' declarator 
         {
-        	type1 = type1+"*";
-        	old_type = old_type+"*";
+        	type1 = new base_type(type1->name+"*");
+        	old_type = new base_type(old_type->name+"*");
         }
         ;
 
 primary_expression 
-        : l_expression
-        {$$ = $1;}
+        : IDENTIFIER
+        {
+        	$$ = new id_astnode($1);
+        	for (int i = 0; i < top_local->table.size(); ++i)
+        	{
+        		if((top_local->table[i])->name==$1)
+        		{
+        			if(((top_local->table[i])->t)->name=="int")
+        				val=1;
+        			else
+        				val=-1;
+        		}
+        	}
+        }
         | INT_CONSTANT
         {$$ = new int_astnode($1);val=$1;} 
         | FLOAT_CONSTANT
@@ -196,7 +208,7 @@ assignment_statement
 expression             //assignment expressions are right associative
         :  logical_or_expression
         {$$ = $1;}
-        |  l_expression '=' expression
+        |  unary_expression '=' expression
         {$$ = new ass_astnode($1,$3);} 
         ;
 
@@ -255,9 +267,7 @@ unary_expression
 	: postfix_expression
 	{$$ = $1;}  				
 	| unary_operator postfix_expression
-	{cout << "blahkskalklf"<<endl;
-	$$ = new unary_astnode($1,$2);
-	cout << "DAFFSFS"<<endl;} 
+	{$$ = new unary_astnode($1,$2);} 
 	;
 
 postfix_expression
