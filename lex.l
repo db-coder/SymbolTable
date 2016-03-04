@@ -3,7 +3,8 @@
 // There may be some flexer directives here
 
 %%
-[ \t\n]                                    //skip
+[ \t]                                    					//skip
+"\n"														{Parser::l_no = Parser::l_no+1;}
 void														return Parser::VOID;
 int															return Parser::INT;
 float														return Parser::FLOAT;
@@ -44,4 +45,3 @@ struct														return Parser::STRUCT;
 ";"                                         				return ';';
 "."															return '.';
 .                                             
-                                      

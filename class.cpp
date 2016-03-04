@@ -83,7 +83,7 @@ class symTab
 		{
 			for (int i = 0; i < table.size(); ++i)
 			{
-				cout<<"name: "<<table[i]->name<<" return type: "<<table[i]->t<<" width: "<<table[i]->width<<" offset: "<<table[i]->offset<<" is_param: "<<table[i]->param<<endl;
+				cout<<"\tname: "<<table[i]->name<<" return type: "<<(table[i]->t)->name<<" width: "<<table[i]->width<<" offset: "<<table[i]->offset<<" is_param: "<<table[i]->param<<endl;
 			}
 		}
 		bool InScope(string s)
@@ -149,7 +149,7 @@ class globalSymTab
 			cout<<endl;
 			for (int i = 0; i < table.size(); ++i)
 			{
-				cout<<"name: "<<table[i]->name<<" return type: "<<table[i]->t<<" width: "<<table[i]->width<<" offset: "<<table[i]->offset<<" symbolTable: \n";
+				cout<<"name: "<<table[i]->name<<" return type: "<<(table[i]->t)->name<<" width: "<<table[i]->width<<" offset: "<<table[i]->offset<<" symbolTable: \n";
 				(table[i]->table)->print();
 			}
 		}
@@ -176,6 +176,7 @@ class globalSymTab
 
 namespace
 {
+	int l_no_class=1;
 	globalSymTab *top = new globalSymTab();
 	symTab *top_local = new symTab();
 	string name,name_func;
@@ -190,24 +191,39 @@ namespace
 			if(t2->name == "int" || t2->name == "float")
 			{
 				if(t1->name != t2->name)
-					cout << "Warning incompatible pointer types";
+					cout << "Warning incompatible pointer types at line number "<<l_no_class<< endl;
 
+			}
+			else 
+			{
+				cerr << "Error : Imcompatible types at line number "<<l_no_class<< endl;
+				exit(0);
 			}
 		}
 		else if(t1->name == "pointer")
 		{
 			if(t2->name == "pointer" || t2->name == "array")
 				equal(t1->t,t2->t);
+			else 
+			{
+				cerr << "Error : Imcompatible types at line number "<<l_no_class<< endl;
+				exit(0);
+			}
 		}
 		else if(t1->name == "array")
 		{
 			if(t2->name == "pointer" || t2->name == "array")
 				equal(t1->t,t2->t);	
+			else 
+			{
+				cerr << "Error : Imcompatible types at line number "<<l_no_class<< endl;
+				exit(0);
+			}
 		}
 		else 
 		{
-			cerr << "Error : Imcompatible types" << endl;
-			abort();
+			cerr << "Error : Imcompatible types at line number "<<l_no_class<< endl;
+			exit(0);
 		}
 	}
 }
@@ -255,8 +271,8 @@ class unary_astnode : public exp_astnode
 					t = (l->t)->t;
 				else
 				{
-					cerr<<"Invalid operator."<<endl;
-					abort();
+					cerr<<"Error: Invalid operator at line number "<<l_no_class<< endl;
+					exit(0);
 				}
 			}
 			else if(s=="&")
@@ -321,35 +337,49 @@ class binary_astnode : public exp_astnode
 		}
 		virtual int print(int ident)
 		{
-			cout<< "("<<exp_name << ' ';
+			cout<< "("<<exp_name;
 			int x=0,y=0;
 			if(cast==1)
 			{
-				cout<<"( TO-FLOAT ";
-				x = left->print(ident+ exp_name.size()+2+11);
+				cout<<"-FLOAT ( TO-FLOAT ";
+				x = left->print(ident+ exp_name.size()+2+11+6);
 				cout<<")";
 				cout<<' ';
-				y = right->print(ident+ exp_name.size()+2+11+x+1+1);
+				y = right->print(ident+ exp_name.size()+2+11+x+1+1+6);
 				cout<<")"; 
-				return x+y+exp_name.size()+4+12;
+				return x+y+exp_name.size()+4+12+6;
 			}
 			else if(cast==2)	
 			{
-				x = left->print(ident+ exp_name.size()+2);
+				cout<<"-FLOAT ";
+				x = left->print(ident+ exp_name.size()+2+6);
 				cout<<' ';
 				cout<<"( TO-FLOAT ";
-				y = right->print(ident+ exp_name.size()+2+11+x+1);
+				y = right->print(ident+ exp_name.size()+2+11+x+1+6);
 				cout<<")";
 				cout<<")"; 
-				return x+y+exp_name.size()+4+12;
+				return x+y+exp_name.size()+4+12+6;
 			}
 			else
 			{
-				x = left->print(ident+ exp_name.size()+2);
-				cout<<' ';
-				y = right->print(ident+ exp_name.size()+2+x+1);
-				cout<<")"; 
-				return x+y+exp_name.size()+4;
+				if(t->name=="int")
+				{
+					cout<<"-INT ";
+					x = left->print(ident+ exp_name.size()+2+4);
+					cout<<' ';
+					y = right->print(ident+ exp_name.size()+2+x+1+4);
+					cout<<")"; 
+					return x+y+exp_name.size()+4+4;
+				}
+				else if(t->name=="float")
+				{
+					cout<<"-FLOAT ";
+					x = left->print(ident+ exp_name.size()+2+6);
+					cout<<' ';
+					y = right->print(ident+ exp_name.size()+2+x+1+6);
+					cout<<")"; 
+					return x+y+exp_name.size()+4+6;
+				}
 			}	
 		}
 };
@@ -709,8 +739,13 @@ class id_astnode : public ref_astnode
 			id_name = name;
 			if(top_local->InScope(name)==0)
 			{
-				cerr<<"Using variable without declaration."<<endl;
-				abort();
+				cerr<<"Error: Using variable without declaration at line number "<<l_no_class<< endl;
+				exit(0);
+			}
+			for (int i = 0; i < (top_local->table).size(); ++i)
+			{
+				if((top_local->table[i])->name==id_name)
+					t = (top_local->table[i])->t;
 			}
 		}
 
@@ -737,8 +772,8 @@ class member_astnode : public ref_astnode
 				{
 					if(((top->table)[i]->table)->InScope(mem->id_name)==0)
 					{
-						cerr<<"Variable is not a member of the struct."<<endl;
-						abort();
+						cerr<<"Error: Variable is not a member of the struct at line number "<<l_no_class<< endl;
+						exit(0);
 					}
 				}
 			}
@@ -771,8 +806,8 @@ class arrow_astnode : public ref_astnode
 				{
 					if(((top->table)[i]->table)->InScope(mem->id_name)==0)
 					{
-						cerr<<"Variable is not a member of the struct."<<endl;
-						abort();
+						cerr<<"Error: Variable is not a member of the struct at line number "<<l_no_class<< endl;
+						exit(0);
 					}
 				}
 			}
@@ -799,7 +834,7 @@ class arrref_astnode : public ref_astnode
 		{
 			id=a;
 			params = b;
-			t = new array_type(b->t);
+			t = new array_type(a->t);
 		}
 
 		virtual int print(int ident)

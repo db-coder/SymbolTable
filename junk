@@ -1,0 +1,11 @@
+(Block [(Ass (Id "c") (PLUS-INT (IntConst 9) (IntConst 12)))
+        (Return (IntConst 0))])
+name: s return type: STRUCT width: 8 offset: 0 symbolTable: 
+	name: y return type: float width: 4 offset: 0 is_param: 0
+	name: z return type: float width: 4 offset: 4 is_param: 0
+name: main return type: int width: 40 offset: 0 symbolTable: 
+	name: argc return type: int width: 4 offset: -4 is_param: 1
+	name: a return type: struct s width: 8 offset: 0 is_param: 0
+	name: x return type: array width: 20 offset: 8 is_param: 0
+	name: b return type: pointer width: 4 offset: 28 is_param: 0
+	name: c return type: int width: 4 offset: 32 is_param: 0

@@ -6,7 +6,8 @@ int main(int argc)
 {
 	struct s a;
 	int x[5];
-	x=1;
-	x=x-y;
+	int *b;
+	int c;
+	c=9+12;
 	return 0;
 }
