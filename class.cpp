@@ -5,20 +5,86 @@
 #include <stack>
 using namespace std;
 
+
+class type {
+	public:
+		string name;
+		type *t;
+};
+class array_type : public type
+{
+public:
+	int dim;
+	array_type(type *t1)
+	{
+		name = "array";
+		t = t1;
+	}
+	
+};
+class pointer_type : public type
+{
+public:
+	pointer_type(type *t1)
+	{
+		name = "pointer";
+		t = t1;
+	}
+};	
+
+class base_type : public type
+{
+public:
+	base_type(string s)
+	{
+		name = s;
+		t = 0;
+	}
+
+};
+
+void equal(type *t1, type *t2)
+{
+	if(t1->name == "int" || t1->name == "float")
+	{
+		if(t2->name == "int" || t2->name == "float")
+		{
+			if(t1->name != t2->name)
+				cout << "Warning incompatible pointer types";
+
+		}
+	}
+	else if(t1->name == "pointer")
+	{
+		if(t2->name == "pointer" || t2->name == "array")
+			equal(t1->t,t2->t);
+	}
+	else if(t1->name == "array")
+	{
+		if(t2->name == "pointer" || t2->name == "array")
+			equal(t1->t,t2->t);	
+	}
+	else 
+	{
+		cerr << "Error : Imcompatible types" << endl;
+		ABORT();
+	}
+
+}
 class symbols
 {
 	public :
 	string name;
 	int width;
-	string type;
+	type* t;
 	int offset;
 	bool param;
-	symbols(string n, int w, int o, string t, bool p)
+	symbols(string n, int w, int o, type* t1, bool p)
 	{
 		name = n;
 		width = w;
 		offset = o;
-		type = t;
+		t = t1;
 		param = p;
 	}
 
@@ -28,7 +94,7 @@ class symTab
 	public:
 	vector <symbols*> table;
 
-	void put(string n, int w, int o, string t, bool p)
+	void put(string n, int w, int o, type* t, bool p)
 	{
 		symbols * x = new symbols(n, w, o, t, p);
 		table.push_back(x);
@@ -44,8 +110,19 @@ class symTab
 	{
 		for (int i = 0; i < table.size(); ++i)
 		{
-			cout<<"name: "<<table[i]->name<<" return type: "<<table[i]->type<<" width: "<<table[i]->width<<" offset: "<<table[i]->offset<<" is_param: "<<table[i]->param<<endl;
+			cout<<"name: "<<table[i]->name<<" return type: "<<table[i]->t<<" width: "<<table[i]->width<<" offset: "<<table[i]->offset<<" is_param: "<<table[i]->param<<endl;
 		}
+	}
+	bool InScope(string s)
+	{
+		for (int i = 0; i < table.size(); ++i)
+		{
+			if(table[i]->name==s)
+			{
+				return true;
+			}
+		}
+		return false;
 	}
 
 };
@@ -54,21 +131,21 @@ class globalSymbol
 	public :
 	int width;
 	string name;
-	string type;
+	type* t;
 	int offset;
 	symTab* table;
-	globalSymbol(string n, int w, int o, string t, symTab* tab)
+	globalSymbol(string n, int w, int o, type* t1, symTab* tab)
 	{
 		name = n;
 		width = w;
 		offset = o;
-		type = t;
+		t = t1;
 		table = tab;
 	}
-	globalSymbol(string n, string t, symTab* tab)
+	globalSymbol(string n, type* t1, symTab* tab)
 	{
 		name = n;
-		type = t;
+		t = t1;
 		table = tab;
 	}
 };
@@ -76,12 +153,12 @@ class globalSymTab
 {
 	public:
 	vector <globalSymbol*> table;
-	void put(string n, int w, int o, string t, symTab* tab)
+	void put(string n, int w, int o, type* t, symTab* tab)
 	{
 		globalSymbol * x = new globalSymbol(n, w, o, t, tab);
 		table.push_back(x);
 	}
-	void put(string n, string t, symTab* tab)
+	void put(string n, type* t, symTab* tab)
 	{
 		globalSymbol * x = new globalSymbol(n, t, tab);
 		table.push_back(x);
@@ -98,7 +175,7 @@ class globalSymTab
 		cout<<endl;
 		for (int i = 0; i < table.size(); ++i)
 		{
-			cout<<"name: "<<table[i]->name<<" return type: "<<table[i]->type<<" width: "<<table[i]->width<<" offset: "<<table[i]->offset<<" symbolTable: \n";
+			cout<<"name: "<<table[i]->name<<" return type: "<<table[i]->t<<" width: "<<table[i]->width<<" offset: "<<table[i]->offset<<" symbolTable: \n";
 			(table[i]->table)->print();
 		}
 	}
@@ -110,18 +187,31 @@ class globalSymTab
 				return (table[i]->table)->total_width();
 		}
 	}
+	bool InScope(string s)
+	{
+		for (int i = 0; i < table.size(); ++i)
+		{
+			if(table[i]->name==s)
+			{
+				return true;
+			}
+		}
+		return false;
+	}
 };
 namespace
 {
 	globalSymTab *top = new globalSymTab();
 	symTab *top_local = new symTab();
-	string old_type,type,name,ret,name_func;
+	string old_type,name,ret,name_func;
+	type* type1;
 	int old_width, width,offset,val;
 }
 
 class abstract_astnode
 {
 	public:
+		type *t;
 		virtual int print (int ident) = 0;
 		// virtual int value () = 0;
 		// virtual string generate_code(const symbolTable&) = 0;
@@ -135,20 +225,16 @@ class abstract_astnode
 
 class stmt_astnode : public abstract_astnode
 {
-	protected:
-		string stmt_name;
 	public:
+		string stmt_name;
 		virtual int print(int ident)=0;
-		virtual ~stmt_astnode(){}
 };
 
 class exp_astnode : public stmt_astnode
 {
-	protected:
-		string exp_name;
 	public:
+		string exp_name;
 		virtual int print(int ident) = 0;
-		virtual ~exp_astnode(){};
 };
 
 class unary_astnode : public exp_astnode
@@ -159,7 +245,26 @@ class unary_astnode : public exp_astnode
 		unary_astnode(string s, exp_astnode *l)
 		{
 			exp_name = s;
+			if(s=="*")
+			{
+				if((l->t)->name=="pointer")
+					t = (l->t)->t;
+				else
+				{
+					cerr<<"Invalid operator."<<endl;
+					ABORT();
+				}
+			}
+			else if(s=="&")
+			{
+				t = new pointer_type(l->t);
+			}
+			else
+			{
+				t = l->t;
+			}
 			left = l;
+
 		}
 		virtual int print(int ident)
 		{			
@@ -167,39 +272,82 @@ class unary_astnode : public exp_astnode
 			int x = left->print(ident + exp_name.size()+2);
 			cout<<")"; 
 			return x+3+exp_name.size();
-		}
-		virtual ~unary_astnode()
-		{
-			delete left;
-		}
-		
+		}		
 };
+
 class binary_astnode : public exp_astnode
 {
 	private:
 		exp_astnode * left, *right;
+		int cast;
 	public:
 		binary_astnode(string s, exp_astnode *l, exp_astnode* r)
 		{
 			exp_name = s;
 			left = l;
 			right = r;
+			string n1 = (l->t)->name;
+			string n2 = (r->t)->name;
+			if(s!="And" && s!="OR_OP" && s!="EQ_OP" || s!="NE_OP")
+			{
+				if((n1=="int" || n1=="float") && (n2=="int" || n2=="float"))
+				{
+					if(n1!=n2)
+					{
+						if(n1=="int")
+							cast=1;
+						else
+							cast=2;
+						t = new base_type("float");
+					}
+					else
+					{
+						t = l->t;
+						cast=0;
+					}
+				}
+				else
+				{
+					equal(l->t,r->t);
+					t = l->t;								//CHECK in future for correctness!!!
+				}
+			}
+			else
+				t = new base_type("int");
 		}
 		virtual int print(int ident)
 		{
 			cout<< "("<<exp_name << ' ';
-			int x = left->print(ident+ exp_name.size()+2);
-			cout<<' ';
-			int y = right->print(ident+ exp_name.size()+2+x+1);
-			cout<<")"; 
-			return x+y+exp_name.size()+4;
+			int x=0,y=0;
+			if(cast==1)
+			{
+				cout<<"( TO-FLOAT ";
+				x = left->print(ident+ exp_name.size()+2+11);
+				cout<<")";
+				cout<<' ';
+				y = right->print(ident+ exp_name.size()+2+11+x+1+1);
+				cout<<")"; 
+				return x+y+exp_name.size()+4+12;
+			}
+			else if(cast==2)	
+			{
+				x = left->print(ident+ exp_name.size()+2);
+				cout<<' ';
+				cout<<"( TO-FLOAT ";
+				y = right->print(ident+ exp_name.size()+2+11+x+1);
+				cout<<")";
+				cout<<")"; 
+				return x+y+exp_name.size()+4+12;
+			}
+			else
+			{
+				x = left->print(ident+ exp_name.size()+2);
+				cout<<' ';
+				y = right->print(ident+ exp_name.size()+2+x+1);
+				cout<<")"; 
+				return x+y+exp_name.size()+4;
+			}	
 		}
-		virtual ~binary_astnode()
-		{
-			delete left;
-			delete right;
-		}
-		
 };
 
 class float_astnode : public exp_astnode
@@ -207,7 +355,11 @@ class float_astnode : public exp_astnode
 	private:
 		float val;
 	public:
-		float_astnode(float s){val = s;}
+		float_astnode(float s)
+		{
+			val = s; 
+			t= new base_type("float");
+		}
 		virtual int print(int ident)
 		{
 			cout<< "(FloatConst "<<val<<")"; 
@@ -221,7 +373,11 @@ class int_astnode : public exp_astnode
 	private:
 		int val;
 	public:
-		int_astnode(int s){val = s;}
+		int_astnode(int s)
+		{
+			val = s; 
+			t = new base_type("int");
+		}
 		virtual int print(int ident)
 		{
 			cout<< "(IntConst "<<val<<")"; 
@@ -235,7 +391,10 @@ class string_astnode : public exp_astnode
 	private:
 		string val;
 	public:
-		string_astnode(string s){val = s;}
+		string_astnode(string s)
+		{
+			val = s;
+		}
 		virtual int print(int ident)
 		{
 			cout<< "(StringConst "<<val<<")"; 
@@ -273,14 +432,8 @@ class explist_astnode : public exp_astnode
 			return max(x, y); 
 		
 		}
-		virtual ~explist_astnode()
-		{
-			delete l ;
-			delete e;
-		}
-		
 };
-class func_astnode : public exp_astnode
+class func_astnode : public exp_astnode  					//CHECK in future!!!
 {
 	private:
 		string val; //identifier
@@ -303,9 +456,9 @@ class func_astnode : public exp_astnode
 			cout<<")"; 
 			return x + val.size() + 3;
 		}
-		virtual ~func_astnode()
+		bool validate()
 		{
-			delete args;
+			return top->InScope(val);
 		}
 };		
 
@@ -319,6 +472,8 @@ class ass_astnode : public exp_astnode
 			exp_name = "Ass";
 			left = l;
 			right = r;
+			equal(l->t,r->t);
+			t = r->t;
 		}
 		virtual int print(int ident)
 		{
@@ -329,13 +484,6 @@ class ass_astnode : public exp_astnode
 			cout<<")"; 
 			return exp_name.size()+x+y+4;
 		}
-		virtual ~ass_astnode()
-		{
-			delete left;
-			delete right;
-		}
-		
-
 };
 
 class if_astnode : public stmt_astnode
@@ -364,14 +512,6 @@ class if_astnode : public stmt_astnode
 			cout<<")"; 
 			return max(max(y,z), x + 4);
 		}
-		virtual ~if_astnode()
-		{
-			delete left;
-			delete middle;
-			delete right;
-		}
-		
-
 };
 
 class empty_astnode : public stmt_astnode
@@ -384,10 +524,6 @@ class empty_astnode : public stmt_astnode
 			cout<< "("<<stmt_name<<")";
 			return 2+ stmt_name.size(); 
 		}
-		virtual ~empty_astnode()
-		{
-		}
-
 };
 
 
@@ -408,10 +544,6 @@ class return_astnode : public stmt_astnode
 			int x = left->print(ident + 2 + stmt_name.size());
 			cout<<")"; 
 			return x  + stmt_name.size() + 3;
-		}
-		virtual ~return_astnode()
-		{
-			delete left;
 		}
 };		
 
@@ -446,15 +578,6 @@ class for_astnode : public stmt_astnode
 			cout<<")"; 
 			return max(5+x, max(y,max(z,w+1)));
 		}
-		virtual ~for_astnode()
-		{
-			delete left;
-			delete middle;
-			delete right;
-			delete stmt;
-		}
-		
-
 };
 
 class while_astnode : public stmt_astnode
@@ -479,13 +602,7 @@ class while_astnode : public stmt_astnode
 			int y = stmt->print(ident + 7);
 			cout<<")";
 			return max(7+x, y+1); 
-		}
-		virtual ~while_astnode()
-		{
-			delete left;
-			delete stmt;
-		}
-		
+		}	
 };
 
 class list_astnode : public stmt_astnode
@@ -518,13 +635,6 @@ class list_astnode : public stmt_astnode
 			return max(x, y);
 			
 		}
-		virtual ~list_astnode()
-		{
-			delete list;
-			delete stmt;
-		}
-		
-
 };
 
 class block_astnode : public stmt_astnode
@@ -544,22 +654,14 @@ class block_astnode : public stmt_astnode
 			int x = block->print(ident + 8);
 			cout<<"])";
 			return 10 + x;
-		}
-		virtual ~block_astnode()
-		{
-			delete block;
-		}
-
-		
+		}	
 };
 
 class ref_astnode : public exp_astnode
 {
-	protected:
-		string ref_name;
 	public:
+		string ref_name;
 		virtual int print(int ident)=0;
-		virtual ~ref_astnode(){}
 };
 
 class assgn_astnode : public stmt_astnode
@@ -590,23 +692,22 @@ class assgn_astnode : public stmt_astnode
 			if(right!=0)y = right->print(ident+ x+ 3 + stmt_name.size());
 			cout<<")"; 
 			return stmt_name.size() + 4 + x + y;
-		}
-		virtual ~assgn_astnode()
-		{
-			delete left;
-			delete right;
 		}	
 };
 
 class id_astnode : public ref_astnode
 {
-	private:
-		string id_name;
 	public:
+		string id_name;
 		id_astnode(string name)
 		{
 			ref_name = "Id";
 			id_name = name;
+			if(top_local->InScope(name)==0)
+			{
+				cerr<<"Using variable without declaration."<<endl;
+				ABORT();
+			}
 		}
 
 		virtual int print(int ident)
@@ -614,7 +715,6 @@ class id_astnode : public ref_astnode
 			cout<< "("<<ref_name<<" \"" <<id_name<<"\")" ;
 			return 5+ref_name.size()+id_name.size();
 		}
-
 };
 
 class member_astnode : public ref_astnode
@@ -627,6 +727,17 @@ class member_astnode : public ref_astnode
 		{
 			id=a;
 			mem=b;
+			for (int i = 0; i < (top->table).size(); ++i)
+			{
+				if((top->table)[i]->name==id->exp_name)
+				{
+					if(((top->table)[i]->table)->InScope(mem->id_name)==0)
+					{
+						cerr<<"Variable is not a member of the struct."<<endl;
+						ABORT();
+					}
+				}
+			}
 		}
 
 		virtual int print(int ident)
@@ -637,11 +748,6 @@ class member_astnode : public ref_astnode
 			int y = mem->print(ident);
 			cout<<")";
 			return 5+x+y+5;
-		}
-		virtual ~member_astnode()
-		{
-			delete id;
-			delete mem;
 		}
 };
 
@@ -655,6 +761,17 @@ class arrow_astnode : public ref_astnode
 		{
 			id=a;
 			mem=b;
+			for (int i = 0; i < (top->table).size(); ++i)
+			{
+				if((top->table)[i]->name==id->exp_name)
+				{
+					if(((top->table)[i]->table)->InScope(mem->id_name)==0)
+					{
+						cerr<<"Variable is not a member of the struct."<<endl;
+						ABORT();
+					}
+				}
+			}
 		}
 
 		virtual int print(int ident)
@@ -665,11 +782,6 @@ class arrow_astnode : public ref_astnode
 			int y = mem->print(ident);
 			cout<<")";
 			return 6+x+y+3;
-		}
-		virtual ~arrow_astnode()
-		{
-			delete id;
-			delete mem;
 		}
 };
 
@@ -683,6 +795,7 @@ class arrref_astnode : public ref_astnode
 		{
 			id=a;
 			params = b;
+			t = new array_type(b->t);
 		}
 
 		virtual int print(int ident)
@@ -694,11 +807,6 @@ class arrref_astnode : public ref_astnode
 			cout<<"])";
 			return 4+x+y+8;
 		}
-		virtual ~arrref_astnode()
-		{
-			delete id;
-			delete params;
-		}
 };		
 
 class ptr_astnode : public exp_astnode
@@ -709,6 +817,7 @@ class ptr_astnode : public exp_astnode
 		ptr_astnode(ref_astnode *a)
 		{
 			id=a;
+			t = new pointer_type(a->t);
 		}
 
 		virtual int print(int ident)
@@ -717,10 +826,6 @@ class ptr_astnode : public exp_astnode
 			int x = id->print(ident);
 			cout<<")";
 			return x+4+6;
-		}
-		virtual ~ptr_astnode()
-		{
-			delete id;
 		}
 };
 
@@ -732,6 +837,7 @@ class deref_astnode : public ref_astnode
 		deref_astnode(ref_astnode *a)
 		{
 			id=a;
+			t = (a->t)->t;
 		}
 
 		virtual int print(int ident)
@@ -740,10 +846,5 @@ class deref_astnode : public ref_astnode
 			int x = id->print(ident);
 			cout<<")";
 			return 4 + x + 4;
-
-		}
-		virtual ~deref_astnode()
-		{
-			delete id;
 		}
 };

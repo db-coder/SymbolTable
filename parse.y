@@ -37,7 +37,7 @@ struct_specifier
         ;
 
 function_definition
-	: {top_local = new symTab();} type_specifier {ret = type; offset = 0;} fun_declarator 
+	: {top_local = new symTab();} type_specifier {ret = type1; offset = 0;} fun_declarator 
 	{ 
 		int n = top_local->table.size();
 		int w = (top_local->table[n-1])->width;
@@ -58,22 +58,22 @@ function_definition
 type_specifier                   // This is the information 
         : VOID 	                 // that gets associated with each identifier
         { 
-        	type = old_type = "void";
+        	type1 = old_type = "void";
     	  	width = old_width = 0;
     	}
         | INT
         { 
-        	type = old_type = "int";
+        	type1 = old_type = "int";
     	  	width = old_width = 4;
     	}   
 	| FLOAT
 	{
-		type  = old_type = "float";
+		type1  = old_type = "float";
 		width  = old_width = 4;
 	} 
         | STRUCT IDENTIFIER 
         {
-        	type = old_type = "struct "+$2;
+        	type1 = old_type = "struct "+$2;
         	width = old_width = top->struct_size($2);
         }
         ;
@@ -97,12 +97,12 @@ fun_declarator
 parameter_list
 	: parameter_declaration 
 	{
-		top_local->put(name,width,offset,type,1);
+		top_local->put(name,width,offset,type1,1);
 		offset+=width;
 	}
 	| parameter_list ',' parameter_declaration 
 	{
-		top_local->put(name,width,offset,type,1);
+		top_local->put(name,width,offset,type1,1);
 		offset+=width;
 	}
 	;
@@ -127,7 +127,7 @@ declarator
 	}
         | '*' declarator 
         {
-        	type = type+"*";
+        	type1 = type1+"*";
         	old_type = old_type+"*";
         }
         ;
@@ -255,7 +255,9 @@ unary_expression
 	: postfix_expression
 	{$$ = $1;}  				
 	| unary_operator postfix_expression
-	{$$ = new unary_astnode($1,$2);} 
+	{cout << "blahkskalklf"<<endl;
+	$$ = new unary_astnode($1,$2);
+	cout << "DAFFSFS"<<endl;} 
 	;
 
 postfix_expression
@@ -302,10 +304,10 @@ expression_list
 	;
 
 unary_operator
-        : '-'	
-	| '!'
-        | '&'
-        | '*' 	
+        : '-'{$$ = "-";}	
+	| '!'{$$ = "!";}
+        | '&'{$$ = "&";}
+        | '*' 	{$$ = "*";}
 	;
 
 selection_statement
@@ -332,16 +334,16 @@ declaration
 declarator_list
 	: declarator 
 	{
-		top_local->put(name,width,offset,type,0);
+		top_local->put(name,width,offset,type1,0);
 		offset+=width;
 		width = old_width;
-		type = old_type;
+		type1 = old_type;
 	}
 	| declarator_list ',' declarator 
 	{
-		top_local->put(name,width,offset,type,0);
+		top_local->put(name,width,offset,type1,0);
 		offset+=width;
 		width = old_width;
-		type = old_type;
+		type1 = old_type;
 	}
  	;
