@@ -342,11 +342,11 @@ class binary_astnode : public exp_astnode
 						cast=0;
 					}
 				}
-				else if(n1=="floatConst" || n1 == "intConst")
+				else if(n1=="float" || n1 == "int")
 				{
 					t = r->t;
 				}
-				else if(n2=="floatConst" || n2 == "intConst" )
+				else if(n2=="float" || n2 == "int" )
 				{
 					t = l->t;
 				}
@@ -416,7 +416,7 @@ class float_astnode : public exp_astnode
 		float_astnode(float s)
 		{
 			val = s; 
-			t= new base_type("floatConst");
+			t= new base_type("float");
 		}
 		virtual int print(int ident)
 		{
@@ -434,7 +434,7 @@ class int_astnode : public exp_astnode
 		int_astnode(int s)
 		{
 			val = s; 
-			t = new base_type("intConst");
+			t = new base_type("int");
 		}
 		virtual int print(int ident)
 		{

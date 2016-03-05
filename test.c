@@ -4,11 +4,10 @@ struct s
 };
 int main(int argc)
 {
-	struct s a;
+	struct s a,z;
 	int x[5];
 	int *b;
 	int c;
-	c=9+12;
-	z = 10;
+	c=1+2;
 	return 0;
 }
