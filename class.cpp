@@ -164,7 +164,7 @@ class symTab
 			for (int i = 0; i < table.size(); ++i)
 			{
 				cout<<"\tname: "<<table[i]->name<<" type: "<<(table[i]->t)->name<<" width: "<<table[i]->width<<" offset: "<<table[i]->offset<<" is_param: "<<table[i]->param<<endl;
-				cout<<string('-',100)<<endl;
+				cout<<string('_',100)<<endl;
 			}
 		}
 		bool InScope(string s)
@@ -241,10 +241,10 @@ class globalSymTab
 					cout << table[i]->params[j]->name << " ";
 				}
 				cout << endl;
-				cout<<string('-',100)<<endl;
+				cout<<string('_',100)<<endl;
 
 				(table[i]->table)->print();
-				cout<<string('-',100)<<endl;
+				cout<<string('_',100)<<endl;
 			}
 		}
 		int struct_size(string s)
@@ -724,7 +724,33 @@ class return_astnode : public stmt_astnode
 		}
 		void validate(type * ret)
 		{
-			if(!equal(ret, left->t))err(5);
+			string n1 = ret->name;
+			string n2 = (left->t)->name;
+			if(n1 == "array"){
+				err(13);
+			}
+			else if(n1 == "pointer"){
+				
+				if(n2 == "int" || n2 == "float" || n2 == "array"|| n2 == "pointer")
+					warning(ret,left->t);
+				else
+					err(5);
+			}
+			else if(n1 == "int"){
+					
+				if(n2 == "int" || n2 == "float" || n2 == "array"|| n2 == "pointer")
+					warning(ret,left->t);
+				else
+					err(5);
+			}
+			else if(n1 == "float"){
+					
+				if(n2 == "int" || n2 == "float")
+					warning(ret,left->t);
+				else
+					err(5);
+			}
+			else if(n1 != n2)err(5);
 		}
 };		
 
