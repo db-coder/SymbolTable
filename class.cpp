@@ -12,6 +12,11 @@ class type {
 	public:
 		string name;
 		type *t;
+		virtual void print()
+		{
+			cout << name ;
+			if(t != 0)t->print();
+		}
 };
 
 class array_type : public type
@@ -35,7 +40,7 @@ class pointer_type : public type
 		}
 };	
 
-class base_type : public type
+class base_type : public type //float, int, void, struct
 {
 	public:
 		base_type(string s)
@@ -44,7 +49,81 @@ class base_type : public type
 			t = 0;
 		}
 };
+namespace
+{
+bool equal(type *t1, type *t2) //check, seriously!
+	{
+		if(t1 == 0 || t2 == 0)
+			return t1 == t2;
+		
+		else if(t1->name == "pointer")
+		{
+			if(t2->name == "pointer" || t2->name == "array")
+				if(!equal(t1->t,t2->t)){
+					return 0;
+				}
+			else 
+			{
+				return 0;
+			}
+		}
+		else if(t1->name == "array")
+		{
+			if(t2->name == "pointer" || t2->name == "array")
+				if(!equal(t1->t,t2->t))
+				{
+					return 0;
+				}	
+			else 
+			{
+				return 0;
+			}
+		}
+		else 
+		{
+			return t1->name == t2->name; //for structs
+		}
+		return 1;
+	}
 
+	void err(int code)
+	{
+		cerr << "Error: ";
+		if(code == 1)cerr << "struct redeclaration";
+		if(code == 2)cerr << "struct not found";
+		if(code == 3)cerr << "function redefinition";
+		if(code == 4)cerr << "function not found";
+		if(code == 5)cerr << "Incompatible types";
+		if(code == 6)cerr << "Invalid operands";
+		if(code == 7)cerr<<"Redeclaration of variable";
+		if(code == 8)cerr<<"Incorrect arguments for function";
+		if(code == 9)cerr << "Using variable without declaration";
+		if(code == 10)cerr << "subscripted value is neither array nor pointer nor vector";
+		if(code == 11)cerr << "Symbol not a member of struct";
+		if(code == 12)cerr << "Symbol not a pointer";
+		if(code == 13)cerr << "Assignment to array not allowed";
+		if(code == 14)cerr << "Indexing into an element which is not an array";
+		cerr <<" at line number "<<l_no<<endl;	
+		abort();
+	}
+	void err(int code, string s)
+	{
+		cerr << "Error: ";
+		if(code == 1)cerr << "Undefined reference to "<<s;
+		if(code == 2)cerr << "Invalid operand to "<<s; 
+		
+		cerr <<" at line number "<<l_no<<endl;	
+		abort();
+	}
+	void warning(type *n1, type * n2)
+	{
+		if(equal(n1, n2))return;
+		cerr << "Warning: ";
+		cerr << "Assignment from incompatible type "<<n2->name<<" to "<<n1->name;
+		
+		cerr <<" at line number "<<l_no<<endl;	
+	}
+}
 class symbols
 {
 	public :
@@ -84,7 +163,8 @@ class symTab
 		{
 			for (int i = 0; i < table.size(); ++i)
 			{
-				cout<<"\tname: "<<table[i]->name<<" return type: "<<(table[i]->t)->name<<" width: "<<table[i]->width<<" offset: "<<table[i]->offset<<" is_param: "<<table[i]->param<<endl;
+				cout<<"\tname: "<<table[i]->name<<" type: "<<(table[i]->t)->name<<" width: "<<table[i]->width<<" offset: "<<table[i]->offset<<" is_param: "<<table[i]->param<<endl;
+				cout<<string('-',100)<<endl;
 			}
 		}
 		bool InScope(string s)
@@ -97,6 +177,12 @@ class symTab
 				}
 			}
 			return false;
+		}
+		type * getType(string s)
+		{
+			for(int i = 0; i <table.size(); i++)
+				if(table[i]->name == s)
+					return table[i]->t;
 		}
 };
 
@@ -142,20 +228,23 @@ class globalSymTab
 			globalSymbol * x = new globalSymbol(n, w, o, t, tab);
 			table.push_back(x);
 		}
-		int total_width()
-		{
-			int sum = 0;
-			for(int i = 0; i <table.size(); i++)
-				sum+=table[i]->width;
-			return sum;
-		}
+		
 		void printTable()
 		{
 			cout<<endl;
 			for (int i = 0; i < table.size(); ++i)
 			{
 				cout<<"name: "<<table[i]->name<<" return type: "<<(table[i]->t)->name<<" width: "<<table[i]->width<<" offset: "<<table[i]->offset<<" symbolTable: \n";
+				cout << "parameters :";
+				for(int j = 0; j <table[i]->params.size(); j++)
+				{
+					cout << table[i]->params[j]->name << " ";
+				}
+				cout << endl;
+				cout<<string('-',100)<<endl;
+
 				(table[i]->table)->print();
+				cout<<string('-',100)<<endl;
 			}
 		}
 		int struct_size(string s)
@@ -166,26 +255,78 @@ class globalSymTab
 					return (table[i]->table)->total_width();
 			}
 		}
-		bool InScope(string s)
-		{
-			for (int i = 0; i < table.size(); ++i)
-			{
-				if(table[i]->name==s)
-				{
-					return true;
-				}
-			}
-			return false;
-		}
-		symTab * symb(string n)
+		
+		symTab * symbStruct(string n)
 		{
 			for(int i = 0; i <table.size(); i++)
 			{
-				if(table[i]->name == n)
+				if(table[i]->name == n && (table[i]->t)->name == "STRUCT")
 					return table[i]->table;
 			}
-			cerr << "Line"<<l_no<<"Function or struct" << n << "not in scope"<<endl;
-			abort();
+			err(1,n);
+			return 0;
+		}
+		symTab * symbFunc(string n)
+		{
+			for(int i = 0; i <table.size(); i++)
+			{
+				if(table[i]->name == n && (table[i]->t)->name != "STRUCT")
+					return table[i]->table;
+			}
+			err(1,n);
+			return 0;
+		}
+		int findFunc(string n, vector <type*> para_type)
+		{
+			bool b = 0;
+			int ret = 0;
+			for(int i = 0; i <table.size(); i++)
+			{
+				if(table[i]->name == n && (table[i])->params.size() == para_type.size())
+				{
+					b =1;
+					ret = 2;
+					for(int j = 0; j <para_type.size(); j++)
+					{
+						if(!equal(para_type[j], (table[i])->params[j]))
+						{
+								b = 0;
+								break;
+						}
+					}
+					if(b)return 1;
+
+				}
+			}
+			return ret;
+		}
+
+		bool findFunc(string n)
+		{
+			for(int i = 0; i <table.size(); i++)
+			{
+				if(table[i]->name == n && (table[i]->t)->name != "STRUCT")return 1;
+			}
+			return 0;
+		}
+		bool findStruct(string n)
+		{
+			bool b = 0;
+			for(int i = 0; i <table.size(); i++)
+			{
+				if(table[i]->name == n && (table[i]->t)->name=="STRUCT")
+					b = 1;
+			}
+			return b;
+			
+		}
+		type * findtype(string s)
+		{
+			for(int i = 0; i <table.size(); i++)
+				if(table[i]->name == s)
+					return table[i]->t;
+			err(1,s);
+
 		}
 };
 
@@ -200,48 +341,7 @@ namespace
 	type* ret;
 	vector <type*> params;
 	int old_width, width,offset,val;
-	void equal(type *t1, type *t2)
-	{
-		if(t1->name == "int" || t1->name == "float")
-		{
-			if(t2->name == "int" || t2->name == "float")
-			{
-				if(t1->name != t2->name)
-					cout << "Warning incompatible pointer types at line number "<<l_no<< endl;
-
-			}
-			else 
-			{
-				cerr << "Error : Imcompatible types at line number "<<l_no<< endl;
-				exit(0);
-			}
-		}
-		else if(t1->name == "pointer")
-		{
-			if(t2->name == "pointer" || t2->name == "array")
-				equal(t1->t,t2->t);
-			else 
-			{
-				cerr << "Error : Imcompatible types at line number "<<l_no<< endl;
-				exit(0);
-			}
-		}
-		else if(t1->name == "array")
-		{
-			if(t2->name == "pointer" || t2->name == "array")
-				equal(t1->t,t2->t);	
-			else 
-			{
-				cerr << "Error : Imcompatible types at line number "<<l_no<< endl;
-				exit(0);
-			}
-		}
-		else 
-		{
-			cerr << "Error : Imcompatible types at line number "<<l_no<< endl;
-			exit(0);
-		}
-	}
+	
 }
 
 class abstract_astnode
@@ -264,6 +364,7 @@ class stmt_astnode : public abstract_astnode
 	public:
 		string stmt_name;
 		virtual int print(int ident)=0;
+		virtual void validate(type *t){}
 };
 
 class exp_astnode : public stmt_astnode
@@ -271,6 +372,7 @@ class exp_astnode : public stmt_astnode
 	public:
 		string exp_name;
 		virtual int print(int ident) = 0;
+		virtual void validate(){};
 };
 
 class unary_astnode : public exp_astnode
@@ -283,13 +385,10 @@ class unary_astnode : public exp_astnode
 			exp_name = s;
 			if(s=="*")
 			{
-				if((l->t)->name=="pointer")
-					t = (l->t)->t;
+				if(l->t == 0 || (l->t)->name!="pointer")
+					err(2, "*");
 				else
-				{
-					cerr<<"Error: Invalid operator at line number "<<l_no<< endl;
-					exit(0);
-				}
+					t = (l->t)->t; 
 			}
 			else if(s=="&")
 			{
@@ -324,7 +423,7 @@ class binary_astnode : public exp_astnode
 			right = r;
 			string n1 = (l->t)->name;
 			string n2 = (r->t)->name;
-			if(s!="And" && s!="OR_OP" && s!="EQ_OP" || s!="NE_OP")
+			if(s!="AND_OP" && s!="OR_OP" && s!="EQ_OP" || s!="NE_OP")
 			{
 				if((n1=="int" || n1=="float") && (n2=="int" || n2=="float"))
 				{
@@ -342,11 +441,11 @@ class binary_astnode : public exp_astnode
 						cast=0;
 					}
 				}
-				else if(n1=="float" || n1 == "int")
+				else if(n1 == "int" && (n2 == "pointer" || n2 =="array"))
 				{
 					t = r->t;
 				}
-				else if(n2=="float" || n2 == "int" )
+				else if(n2 == "int" && (n1 == "pointer" || n1 =="array"))
 				{
 					t = l->t;
 				}
@@ -362,6 +461,7 @@ class binary_astnode : public exp_astnode
 		virtual int print(int ident)
 		{
 			cout<< "("<<exp_name;
+			//t->print();
 			int x=0,y=0;
 			if(cast==1)
 			{
@@ -452,6 +552,7 @@ class string_astnode : public exp_astnode
 		string_astnode(string s)
 		{
 			val = s;
+			t = new base_type("string");
 		}
 		virtual int print(int ident)
 		{
@@ -459,37 +560,7 @@ class string_astnode : public exp_astnode
 			return val.size() + 14;
 		}
 };
-/*
-class explist_astnode : public exp_astnode
-{
-	private:
-		vector<exp_astnode*> list;
-	public:
-		explist_astnode(exp_astnode *e1)
-		{
-			list.push_back(e1);
-		}
-		explist_astnode(explist_astnode v, exp)
-		{
-			list = v;
-		}
-		virtual int print(int ident)
-		{
-			int x = 0, y = 0;
-			list[1]->print(ident);
-			cout<<"\n";
-			cout << string(ident, ' ');
-			for(int i = 1; i <list.size(); i++)
-			{
-				y =list[i]->print(ident);
-				x = max(x,y);
-				cout<<"\n";
-				cout << string(ident, ' ');
-			}
-			return x;
-		
-		}
-};*/
+
 class func_astnode : public exp_astnode  					//CHECK in future!!!
 {
 	private:
@@ -503,6 +574,7 @@ class func_astnode : public exp_astnode  					//CHECK in future!!!
 		func_astnode(string s, vector <exp_astnode*> a){
 			val = s;
 			list = a;
+			t = top->findtype(val);          //add findtype
 		}
 		virtual int print(int ident)
 		{
@@ -511,7 +583,7 @@ class func_astnode : public exp_astnode  					//CHECK in future!!!
 			if(!list.empty()){
 
 			int x = 0, y = 0;
-			list[1]->print(ident+2+val.size());
+			list[0]->print(ident+2+val.size());
 			cout<<"\n";
 			cout << string(ident+2+val.size(), ' ');
 			for(int i = 1; i <list.size(); i++)
@@ -525,9 +597,17 @@ class func_astnode : public exp_astnode  					//CHECK in future!!!
 			cout<<")"; 
 			return x + val.size() + 3;
 		}
-		bool validate()
+		
+		void validate()
 		{
-			return top->InScope(val);
+			vector <type*> vec;
+			for(int i = 0; i <list.size(); i++){
+				vec.push_back(list[i]->t);
+			
+			}
+			int k = top->findFunc(val, vec);
+			if(k == 0)err(1,val);	
+			if(k == 2)err(8);
 		}
 };		
 
@@ -541,8 +621,36 @@ class ass_astnode : public exp_astnode
 			exp_name = "Ass";
 			left = l;
 			right = r;
-			equal(l->t,r->t);
-			t = r->t;
+
+			string n1 = (l->t)->name;
+			string n2 = (r->t)->name;
+			if(n1 == "array"){
+				err(13);
+			}
+			else if(n1 == "pointer"){
+				
+				if(n2 == "int" || n2 == "float" || n2 == "array"|| n2 == "pointer")
+					warning(l->t,r->t);
+				else
+					err(5);
+			}
+			else if(n1 == "int"){
+					
+				if(n2 == "int" || n2 == "float" || n2 == "array"|| n2 == "pointer")
+					warning(l->t,r->t);
+				else
+					err(5);
+			}
+			else if(n1 == "float"){
+					
+				if(n2 == "int" || n2 == "float")
+					warning(l->t,r->t);
+				else
+					err(5);
+			}
+			else if(n1 != n2)err(5);
+
+			t = l->t;
 		}
 		virtual int print(int ident)
 		{
@@ -614,9 +722,9 @@ class return_astnode : public stmt_astnode
 			cout<<")"; 
 			return x  + stmt_name.size() + 3;
 		}
-		void validate()
+		void validate(type * ret)
 		{
-
+			if(!equal(ret, left->t))err(5);
 		}
 };		
 
@@ -703,8 +811,8 @@ class list_astnode : public stmt_astnode
 				cout<<string(ident, ' ');
 				y = stmt->print(ident);
 			}
-			else 
-			y = stmt->print(ident);
+			else {
+			y = stmt->print(ident);}
 			return max(x, y);
 			
 		}
@@ -736,7 +844,7 @@ class ref_astnode : public exp_astnode
 		string ref_name;
 		virtual int print(int ident)=0;
 };
-
+/*
 class assgn_astnode : public stmt_astnode
 {
 	private:
@@ -767,7 +875,7 @@ class assgn_astnode : public stmt_astnode
 			return stmt_name.size() + 4 + x + y;
 		}	
 };
-
+*/
 class id_astnode : public ref_astnode
 {
 	public:
@@ -778,8 +886,7 @@ class id_astnode : public ref_astnode
 			id_name = name;
 			if(top_local->InScope(name)==0)
 			{
-				cerr<<"Error: Using variable without declaration at line number "<<l_no<< endl;
-				exit(0);
+				err(9);
 			}
 			for (int i = 0; i < (top_local->table).size(); ++i)
 			{
@@ -805,17 +912,9 @@ class member_astnode : public ref_astnode
 		{
 			id=a;
 			mem=b;
-			for (int i = 0; i < (top->table).size(); ++i)
-			{
-				if((top->table)[i]->name==id->exp_name)
-				{
-					if(((top->table)[i]->table)->InScope(mem->id_name)==0)
-					{
-						cerr<<"Error: Variable is not a member of the struct at line number "<<l_no<< endl;
-						exit(0);
-					}
-				}
-			}
+			symTab* s = top->symbStruct((id->t)->name);
+			if(!s->InScope(mem->id_name))err(11);
+			t = s->getType(mem->id_name);
 		}
 
 		virtual int print(int ident)
@@ -839,17 +938,11 @@ class arrow_astnode : public ref_astnode
 		{
 			id=a;
 			mem=b;
-			for (int i = 0; i < (top->table).size(); ++i)
-			{
-				if((top->table)[i]->name==id->exp_name)
-				{
-					if(((top->table)[i]->table)->InScope(mem->id_name)==0)
-					{
-						cerr<<"Error: Variable is not a member of the struct at line number "<<l_no<< endl;
-						exit(0);
-					}
-				}
-			}
+			if((id->t)->name != "pointer")err(12); //Not a pointer
+			if((id->t)->t == 0)err(12);
+			symTab* s = top->symbStruct(((id->t)->t)->name);
+			if(!s->InScope(mem->id_name))err(11);
+			t = s->getType(mem->id_name);
 		}
 
 		virtual int print(int ident)
@@ -873,7 +966,9 @@ class arrref_astnode : public ref_astnode
 		{
 			id=a;
 			params = b;
-			t = new array_type(a->t);
+			if((id->t)->name != "array")err(14);
+			t = (id->t)->t;
+			if(t == 0)err(10);
 		}
 
 		virtual int print(int ident)
