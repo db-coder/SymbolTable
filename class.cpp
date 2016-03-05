@@ -4,9 +4,10 @@
 #include <vector>
 #include <stack>
 #include <cstdlib>
-
+#include "Parserbase.h"
 using namespace std;
 
+extern int l_no;
 class type {
 	public:
 		string name;
@@ -107,17 +108,21 @@ class globalSymbol
 		type* t;
 		int offset;
 		symTab* table;
-		globalSymbol(string n, int w, int o, type* t1, symTab* tab)
+		vector<type *> params;
+		globalSymbol(string n, int w, int o, type* t1, symTab* tab, vector<type*> v)
 		{
 			name = n;
 			width = w;
 			offset = o;
 			t = t1;
 			table = tab;
+			params = v;
 		}
-		globalSymbol(string n, type* t1, symTab* tab)
+		globalSymbol(string n, int w, int o, type* t1, symTab* tab)
 		{
 			name = n;
+			width = w;
+			offset = o;
 			t = t1;
 			table = tab;
 		}
@@ -127,14 +132,14 @@ class globalSymTab
 {
 	public:
 		vector <globalSymbol*> table;
+		void put(string n, int w, int o, type* t, symTab* tab, vector<type*> v)
+		{
+			globalSymbol * x = new globalSymbol(n, w, o, t, tab, v);
+			table.push_back(x);
+		}
 		void put(string n, int w, int o, type* t, symTab* tab)
 		{
 			globalSymbol * x = new globalSymbol(n, w, o, t, tab);
-			table.push_back(x);
-		}
-		void put(string n, type* t, symTab* tab)
-		{
-			globalSymbol * x = new globalSymbol(n, t, tab);
 			table.push_back(x);
 		}
 		int total_width()
@@ -172,17 +177,28 @@ class globalSymTab
 			}
 			return false;
 		}
+		symTab * symb(string n)
+		{
+			for(int i = 0; i <table.size(); i++)
+			{
+				if(table[i]->name == n)
+					return table[i]->table;
+			}
+			cerr << "Line"<<l_no<<"Function or struct" << n << "not in scope"<<endl;
+			abort();
+		}
 };
 
 namespace
 {
-	int l_no_class=1;
+
 	globalSymTab *top = new globalSymTab();
 	symTab *top_local = new symTab();
 	string name,name_func;
 	type* type1;
 	type* old_type;
 	type* ret;
+	vector <type*> params;
 	int old_width, width,offset,val;
 	void equal(type *t1, type *t2)
 	{
@@ -191,12 +207,12 @@ namespace
 			if(t2->name == "int" || t2->name == "float")
 			{
 				if(t1->name != t2->name)
-					cout << "Warning incompatible pointer types at line number "<<l_no_class<< endl;
+					cout << "Warning incompatible pointer types at line number "<<l_no<< endl;
 
 			}
 			else 
 			{
-				cerr << "Error : Imcompatible types at line number "<<l_no_class<< endl;
+				cerr << "Error : Imcompatible types at line number "<<l_no<< endl;
 				exit(0);
 			}
 		}
@@ -206,7 +222,7 @@ namespace
 				equal(t1->t,t2->t);
 			else 
 			{
-				cerr << "Error : Imcompatible types at line number "<<l_no_class<< endl;
+				cerr << "Error : Imcompatible types at line number "<<l_no<< endl;
 				exit(0);
 			}
 		}
@@ -216,13 +232,13 @@ namespace
 				equal(t1->t,t2->t);	
 			else 
 			{
-				cerr << "Error : Imcompatible types at line number "<<l_no_class<< endl;
+				cerr << "Error : Imcompatible types at line number "<<l_no<< endl;
 				exit(0);
 			}
 		}
 		else 
 		{
-			cerr << "Error : Imcompatible types at line number "<<l_no_class<< endl;
+			cerr << "Error : Imcompatible types at line number "<<l_no<< endl;
 			exit(0);
 		}
 	}
@@ -271,7 +287,7 @@ class unary_astnode : public exp_astnode
 					t = (l->t)->t;
 				else
 				{
-					cerr<<"Error: Invalid operator at line number "<<l_no_class<< endl;
+					cerr<<"Error: Invalid operator at line number "<<l_no<< endl;
 					exit(0);
 				}
 			}
@@ -326,10 +342,18 @@ class binary_astnode : public exp_astnode
 						cast=0;
 					}
 				}
-				else
+				else if(n1=="floatConst" || n1 == "intConst")
 				{
-					equal(l->t,r->t);
-					t = l->t;								//CHECK in future for correctness!!!
+					t = r->t;
+				}
+				else if(n2=="floatConst" || n2 == "intConst" )
+				{
+					t = l->t;
+				}
+				else 
+				{
+					cerr << "Error: invalid operands for "<<s<<" at line number "<<l_no<<endl;
+					abort();							//CHECK in future for correctness!!!
 				}
 			}
 			else
@@ -392,7 +416,7 @@ class float_astnode : public exp_astnode
 		float_astnode(float s)
 		{
 			val = s; 
-			t= new base_type("float");
+			t= new base_type("floatConst");
 		}
 		virtual int print(int ident)
 		{
@@ -410,7 +434,7 @@ class int_astnode : public exp_astnode
 		int_astnode(int s)
 		{
 			val = s; 
-			t = new base_type("int");
+			t = new base_type("intConst");
 		}
 		virtual int print(int ident)
 		{
@@ -435,58 +459,69 @@ class string_astnode : public exp_astnode
 			return val.size() + 14;
 		}
 };
-
+/*
 class explist_astnode : public exp_astnode
 {
 	private:
-		exp_astnode *l;
-		exp_astnode *e;
+		vector<exp_astnode*> list;
 	public:
 		explist_astnode(exp_astnode *e1)
 		{
-			e = e1;
-			l = 0;
+			list.push_back(e1);
 		}
-		explist_astnode(exp_astnode *y, exp_astnode *x)
+		explist_astnode(explist_astnode v, exp)
 		{
-			l = y;
-			e = x;
+			list = v;
 		}
 		virtual int print(int ident)
 		{
 			int x = 0, y = 0;
-			if(l != 0){
-				x = l->print(ident);
+			list[1]->print(ident);
+			cout<<"\n";
+			cout << string(ident, ' ');
+			for(int i = 1; i <list.size(); i++)
+			{
+				y =list[i]->print(ident);
+				x = max(x,y);
 				cout<<"\n";
-				cout<<string(ident, ' ');
-				y = e->print(ident);
+				cout << string(ident, ' ');
 			}
-			else 
-			x = e->print(ident);
-			return max(x, y); 
+			return x;
 		
 		}
-};
+};*/
 class func_astnode : public exp_astnode  					//CHECK in future!!!
 {
 	private:
 		string val; //identifier
-		exp_astnode * args;
+		vector<exp_astnode*> list;
 	public:
 		func_astnode(string s){
 			val = s;
-			args = 0;
 		}
 		
-		func_astnode(string s, exp_astnode * a){
+		func_astnode(string s, vector <exp_astnode*> a){
 			val = s;
-			args = a;
+			list = a;
 		}
 		virtual int print(int ident)
 		{
 			int x = 0;
 			cout<< "(" <<val <<' ';
-			if(args!=0)x = args->print(ident+2+val.size());
+			if(!list.empty()){
+
+			int x = 0, y = 0;
+			list[1]->print(ident+2+val.size());
+			cout<<"\n";
+			cout << string(ident+2+val.size(), ' ');
+			for(int i = 1; i <list.size(); i++)
+			{
+				y =list[i]->print(ident+2+val.size());
+				x = max(x,y);
+				cout<<"\n";
+				cout << string(ident+2+val.size(), ' ');
+			}
+		}
 			cout<<")"; 
 			return x + val.size() + 3;
 		}
@@ -578,6 +613,10 @@ class return_astnode : public stmt_astnode
 			int x = left->print(ident + 2 + stmt_name.size());
 			cout<<")"; 
 			return x  + stmt_name.size() + 3;
+		}
+		void validate()
+		{
+
 		}
 };		
 
@@ -739,7 +778,7 @@ class id_astnode : public ref_astnode
 			id_name = name;
 			if(top_local->InScope(name)==0)
 			{
-				cerr<<"Error: Using variable without declaration at line number "<<l_no_class<< endl;
+				cerr<<"Error: Using variable without declaration at line number "<<l_no<< endl;
 				exit(0);
 			}
 			for (int i = 0; i < (top_local->table).size(); ++i)
@@ -772,7 +811,7 @@ class member_astnode : public ref_astnode
 				{
 					if(((top->table)[i]->table)->InScope(mem->id_name)==0)
 					{
-						cerr<<"Error: Variable is not a member of the struct at line number "<<l_no_class<< endl;
+						cerr<<"Error: Variable is not a member of the struct at line number "<<l_no<< endl;
 						exit(0);
 					}
 				}
@@ -806,7 +845,7 @@ class arrow_astnode : public ref_astnode
 				{
 					if(((top->table)[i]->table)->InScope(mem->id_name)==0)
 					{
-						cerr<<"Error: Variable is not a member of the struct at line number "<<l_no_class<< endl;
+						cerr<<"Error: Variable is not a member of the struct at line number "<<l_no<< endl;
 						exit(0);
 					}
 				}

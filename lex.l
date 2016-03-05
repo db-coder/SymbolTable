@@ -4,7 +4,7 @@
 
 %%
 [ \t]                                    					//skip
-"\n"														{Parser::l_no = Parser::l_no+1;}
+"\n"														{l_no = l_no+1;}
 void														return Parser::VOID;
 int															return Parser::INT;
 float														return Parser::FLOAT;

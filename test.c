@@ -9,5 +9,6 @@ int main(int argc)
 	int *b;
 	int c;
 	c=9+12;
+	z = 10;
 	return 0;
 }
