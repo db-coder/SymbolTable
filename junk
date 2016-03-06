@@ -1,12 +1,34 @@
+
+name: s; return type: STRUCT; width: 8; offset: 0; symbolTable: 
+ddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd
+	name: y; type: float; width: 4; offset: 0; is_param: 0
+	name: z; type: float; width: 4; offset: 4; is_param: 0
+ddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd
+name: d; return type: STRUCT; width: 8; offset: 0; symbolTable: 
+ddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd
+	name: y; type: float; width: 4; offset: 8; is_param: 0
+	name: z; type: float; width: 4; offset: 12; is_param: 0
+ddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd
 (Block [(Ass (Id "c") (PLUS-INT (IntConst 1) (IntConst 2)))
+        (Ass (Id "b") (PLUS-INT (* (Id "b")) (IntConst 1)))
+        (Ass (* (Id "b")) (Id "c"))
         (Return (IntConst 0))])
-name: s return type: STRUCT width: 8 offset: 0 symbolTable: 
-	name: y return type: float width: 4 offset: 0 is_param: 0
-	name: z return type: float width: 4 offset: 4 is_param: 0
-name: main return type: int width: 48 offset: 0 symbolTable: 
-	name: argc return type: int width: 4 offset: -4 is_param: 1
-	name: a return type: struct s width: 8 offset: 0 is_param: 0
-	name: z return type: struct s width: 8 offset: 8 is_param: 0
-	name: x return type: array width: 20 offset: 16 is_param: 0
-	name: b return type: pointer width: 4 offset: 36 is_param: 0
-	name: c return type: int width: 4 offset: 40 is_param: 0
+name: s; return type: STRUCT; width: 8; offset: 0; symbolTable: 
+ddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd
+	name: y; type: float; width: 4; offset: 0; is_param: 0
+	name: z; type: float; width: 4; offset: 4; is_param: 0
+ddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd
+name: d; return type: STRUCT; width: 8; offset: 0; symbolTable: 
+ddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd
+	name: y; type: float; width: 4; offset: 8; is_param: 0
+	name: z; type: float; width: 4; offset: 12; is_param: 0
+ddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd
+name: main; return type: int; width: 48; offset: 0; parameters :int ; symbolTable: 
+ddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd
+	name: argc; type: int; width: 4; offset: -4; is_param: 1
+	name: a; type: s; width: 8; offset: 0; is_param: 0
+	name: z; type: s; width: 8; offset: 8; is_param: 0
+	name: x; type: array of int; width: 20; offset: 16; is_param: 0
+	name: b; type: pointer to int; width: 4; offset: 36; is_param: 0
+	name: c; type: int; width: 4; offset: 40; is_param: 0
+ddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd

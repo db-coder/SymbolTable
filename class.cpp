@@ -15,7 +15,16 @@ class type {
 		virtual void print()
 		{
 			cout << name ;
-			if(t != 0)t->print();
+			if(t != 0)
+			{
+				if(name=="array")
+					cout<<" of ";
+				else if(name=="pointer")
+					cout<<" to ";
+				else
+					cout<<" ";
+				t->print();
+			}
 		}
 };
 
@@ -163,8 +172,9 @@ class symTab
 		{
 			for (int i = 0; i < table.size(); ++i)
 			{
-				cout<<"\tname: "<<table[i]->name<<" type: "<<(table[i]->t)->name<<" width: "<<table[i]->width<<" offset: "<<table[i]->offset<<" is_param: "<<table[i]->param<<endl;
-				cout<<string('_',100)<<endl;
+				cout<<"\tname: "<<table[i]->name<<"; type: ";
+				(table[i]->t)->print();
+				cout<<"; width: "<<table[i]->width<<"; offset: "<<table[i]->offset<<"; is_param: "<<table[i]->param<<endl;
 			}
 		}
 		bool InScope(string s)
@@ -234,13 +244,18 @@ class globalSymTab
 			cout<<endl;
 			for (int i = 0; i < table.size(); ++i)
 			{
-				cout<<"name: "<<table[i]->name<<" return type: "<<(table[i]->t)->name<<" width: "<<table[i]->width<<" offset: "<<table[i]->offset<<" symbolTable: \n";
-				cout << "parameters :";
-				for(int j = 0; j <table[i]->params.size(); j++)
+				cout<<"name: "<<table[i]->name<<"; return type: ";
+				(table[i]->t)->print();
+				cout<<"; width: "<<table[i]->width<<"; offset: "<<table[i]->offset;
+				if((table[i]->t)->name!="STRUCT")
 				{
-					cout << table[i]->params[j]->name << " ";
+					cout << "; parameters :";
+					for(int j = 0; j <table[i]->params.size(); j++)
+					{
+						cout << table[i]->params[j]->name << " ";
+					}
 				}
-				cout << endl;
+				cout<<"; symbolTable: \n";
 				cout<<string('_',100)<<endl;
 
 				(table[i]->table)->print();
@@ -315,7 +330,9 @@ class globalSymTab
 			for(int i = 0; i <table.size(); i++)
 			{
 				if(table[i]->name == n && (table[i]->t)->name=="STRUCT")
+				{
 					b = 1;
+				}
 			}
 			return b;
 			
@@ -340,7 +357,7 @@ namespace
 	type* old_type;
 	type* ret;
 	vector <type*> params;
-	int old_width, width,offset,val;
+	int old_width, width,offset,val,p=1;
 	
 }
 
