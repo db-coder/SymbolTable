@@ -43,33 +43,36 @@ struct_specifier
 function_definition
 	: {top_local = new symTab();} type_specifier {ret = type1; offset = 0; params.clear();} fun_declarator 
 	{
-		
-		int n = top_local->table.size();
-		int w = (top_local->table[n-1])->width;
-		(top_local->table[n-1])->offset = -w;
-		for(int i=(top_local->table).size()-2;i>=0;i--)
+		if(!params.empty())
 		{
-			w+=(top_local->table[i])->width;
-			(top_local->table[i])->offset = -w;
+			int n = top_local->table.size();
+			int w = (top_local->table[n-1])->width;
+			(top_local->table[n-1])->offset = -w;
+			for(int i=(top_local->table).size()-2;i>=0;i--)
+			{
+				w+=(top_local->table[i])->width;
+				(top_local->table[i])->offset = -w;
+			}
 		}
 		offset = 0;
 	} 
 	compound_statement 
 	{ 
-		top->put(name_func,top_local->total_width(),0,ret,top_local,params);
+		if(!params.empty())
+			top->put(name_func,top_local->total_width(),0,ret,top_local,params);
+		else
+			top->put(name_func,top_local->total_width(),0,ret,top_local);
 	}
 	;
 
 type_specifier                   // This is the information 
         : VOID 	                 // that gets associated with each identifier
         {
-        	
         	type1 = old_type = new base_type("void");
     	  	width = old_width = 0;
     	}
         | INT
         {
-        	
         	type1 = old_type = new base_type("int");
     	  	width = old_width = 4;
     	}   
@@ -80,7 +83,7 @@ type_specifier                   // This is the information
 		} 
         | STRUCT IDENTIFIER 
         {
-        	if(!top->findStruct($2))err(1);
+        	if(!top->findStruct($2))err(3,$2);
         	type1 = old_type = new base_type($2);
         	width = old_width = top->struct_size($2);
         	
@@ -100,7 +103,7 @@ fun_declarator
 	}
     | '*' fun_declarator  //The * is associated with the 
     {    	
-    	ret = new pointer_type(ret->t);
+    	ret = new pointer_type(ret);
     }
 	;                      //function name
 
@@ -130,7 +133,7 @@ declarator
 		name = $1;
 		if(top_local->InScope(name))
 		{
-			err(7);
+			err(7,name);
 		}
 	}
 	| declarator '[' primary_expression']' // check separately that it is a constant
@@ -355,7 +358,7 @@ unary_expression
 	{		
 		$$ = $1;
 	}  				
-	| unary_operator postfix_expression
+	| unary_operator unary_expression
 	{		
 		$$ = new unary_astnode($1,$2);
 	} 
@@ -378,16 +381,23 @@ postfix_expression
 	}
     | postfix_expression '[' expression ']'
     {
+    	if(val<0)
+		{
+			cerr<<"Error: Array index should be a positive integer at line number "<<l_no<<endl;
+			ABORT();
+		}
     	if(top_local->InScope($1->exp_name)){cerr << "yo";};
     	$$ = new arrref_astnode($1, $3);  
     }  
     | postfix_expression '.' IDENTIFIER
     {    	
+    	ptr=1;
     	id_astnode *x = new id_astnode($3);
     	$$ = new member_astnode($1,x);
     }
     | postfix_expression PTR_OP IDENTIFIER
 	{		
+		ptr=1;
 		id_astnode *x = new id_astnode($3);
    		$$ = new arrow_astnode($1,x);
     } 
@@ -403,7 +413,12 @@ l_expression                // A separate non-terminal for l_expressions
         	$$ = new id_astnode($1);
         }
         | l_expression '[' expression ']'
-        {        	
+        {
+        	if(val<0)
+			{
+				cerr<<"Error: Array index should be a positive integer at line number "<<l_no<<endl;
+				ABORT();
+			}        	
         	$$ = new arrref_astnode($1, $3);  
         }  	
         | '*' l_expression
@@ -411,12 +426,14 @@ l_expression                // A separate non-terminal for l_expressions
         	$$ = new deref_astnode($2);
         }
         | l_expression '.' IDENTIFIER
-        {        	
+        {   
+        	ptr=1;     	
         	id_astnode *x = new id_astnode($3);
 	        $$ = new member_astnode($1,x);
 	    }
         | l_expression PTR_OP IDENTIFIER
-        {        	
+        {  
+        	ptr=1;      	
         	id_astnode *x = new id_astnode($3);
 	        $$ = new arrow_astnode($1,x);
 	    }
@@ -494,7 +511,9 @@ declaration
 
 declarator_list
 	: declarator 
-	{		
+	{	
+		if(type1->name=="void")	
+			err(2);
 		top_local->put(name,width,offset,type1,0);
 		offset+=width;
 		width = old_width;

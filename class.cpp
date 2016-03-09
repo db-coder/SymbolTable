@@ -63,8 +63,11 @@ namespace
 bool equal(type *t1, type *t2) //check, seriously!
 	{
 		if(t1 == 0 || t2 == 0)
+		{
+			if(t1->name=="void" || t2->name=="void")
+				return true;
 			return t1 == t2;
-		
+		}
 		else if(t1->name == "pointer")
 		{
 			if(t2->name == "pointer" || t2->name == "array")
@@ -97,39 +100,38 @@ bool equal(type *t1, type *t2) //check, seriously!
 
 	void err(int code)
 	{
-		cerr << "Error: ";
+		cerr << "Error at line number "<<l_no<<" : ";
 		if(code == 1)cerr << "struct redeclaration";
-		if(code == 2)cerr << "struct not found";
+		if(code == 2)cerr << "cannot declare variable of type void";
 		if(code == 3)cerr << "function redefinition";
 		if(code == 4)cerr << "function not found";
 		if(code == 5)cerr << "Incompatible types";
 		if(code == 6)cerr << "Invalid operands";
-		if(code == 7)cerr<<"Redeclaration of variable";
-		if(code == 8)cerr<<"Incorrect arguments for function";
-		if(code == 9)cerr << "Using variable without declaration";
 		if(code == 10)cerr << "subscripted value is neither array nor pointer nor vector";
 		if(code == 11)cerr << "Symbol not a member of struct";
 		if(code == 12)cerr << "Symbol not a pointer";
 		if(code == 13)cerr << "Assignment to array not allowed";
 		if(code == 14)cerr << "Indexing into an element which is not an array";
-		cerr <<" at line number "<<l_no<<endl;	
-		abort();
+		cerr<<endl;	
+		exit(0);
 	}
 	void err(int code, string s)
 	{
-		cerr << "Error: ";
+		cerr << "Error at line number "<<l_no<<" : ";
 		if(code == 1)cerr << "Undefined reference to "<<s;
 		if(code == 2)cerr << "Invalid operand to "<<s; 
-		
-		cerr <<" at line number "<<l_no<<endl;	
-		abort();
+		if(code == 3)cerr << "struct "<<s<<" not found";
+		if(code == 7)cerr<<"Redeclaration of variable '"<<s<<"'";
+		if(code == 8)cerr<<"Incorrect arguments for function '"<<s<<"'";
+		if(code == 9)cerr << "Using variable '"<<s<<"' without declaration";
+		cerr<<endl;	
+		exit(0);
 	}
 	void warning(type *n1, type * n2)
 	{
 		if(equal(n1, n2))return;
 		cerr << "Warning: ";
 		cerr << "Assignment from incompatible type "<<n2->name<<" to "<<n1->name;
-		
 		cerr <<" at line number "<<l_no<<endl;	
 	}
 }
@@ -357,7 +359,7 @@ namespace
 	type* old_type;
 	type* ret;
 	vector <type*> params;
-	int old_width, width,offset,val,p=1;
+	int old_width, width,offset,val,ptr=0;
 	
 }
 
@@ -469,7 +471,7 @@ class binary_astnode : public exp_astnode
 				else 
 				{
 					cerr << "Error: invalid operands for "<<s<<" at line number "<<l_no<<endl;
-					abort();							//CHECK in future for correctness!!!
+					exit(0);							//CHECK in future for correctness!!!
 				}
 			}
 			else
@@ -623,8 +625,8 @@ class func_astnode : public exp_astnode  					//CHECK in future!!!
 			
 			}
 			int k = top->findFunc(val, vec);
-			if(k == 0)err(1,val);	
-			if(k == 2)err(8);
+			if(k == 0)err(8,val);	
+			if(k == 2)err(8,val);
 		}
 };		
 
@@ -641,32 +643,42 @@ class ass_astnode : public exp_astnode
 
 			string n1 = (l->t)->name;
 			string n2 = (r->t)->name;
-			if(n1 == "array"){
+			if(n1 == "array")
+			{
 				err(13);
 			}
-			else if(n1 == "pointer"){
-				
+			else if(n1 == "pointer")
+			{				
+				if(n2 == "pointer" && ((r->t)->t)->name=="void")
+				{}
+				else if(n2 == "array" || n2 == "pointer")
+				{
+					if(!equal((l->t)->t,(r->t)->t))
+						err(5);
+				}
+				else if(n2 == "int" || n2 == "float")
+				{
+					warning(l->t,r->t);
+				}	
+				else
+					err(5);
+			}
+			else if(n1 == "int")
+			{					
 				if(n2 == "int" || n2 == "float" || n2 == "array"|| n2 == "pointer")
 					warning(l->t,r->t);
 				else
 					err(5);
 			}
-			else if(n1 == "int"){
-					
-				if(n2 == "int" || n2 == "float" || n2 == "array"|| n2 == "pointer")
-					warning(l->t,r->t);
-				else
-					err(5);
-			}
-			else if(n1 == "float"){
-					
+			else if(n1 == "float")
+			{					
 				if(n2 == "int" || n2 == "float")
 					warning(l->t,r->t);
 				else
 					err(5);
 			}
-			else if(n1 != n2)err(5);
-
+			else if(n1 != n2)
+				err(5);
 			t = l->t;
 		}
 		virtual int print(int ident)
@@ -741,27 +753,38 @@ class return_astnode : public stmt_astnode
 		}
 		void validate(type * ret)
 		{
+			top_local->print();
 			string n1 = ret->name;
 			string n2 = (left->t)->name;
-			if(n1 == "array"){
+			if(n1 == "array")
+			{
 				err(13);
 			}
-			else if(n1 == "pointer"){
-				
+			else if(n1 == "pointer")
+			{
+				if(n2 == "pointer" && ((left->t)->t)->name=="void")
+				{}
+				else if(n2 == "array" || n2 == "pointer")
+				{
+					if(!equal(ret->t,(left->t)->t))
+						err(5);
+				}
+				else if(n2 == "int" || n2 == "float")
+				{
+					warning(ret,left->t);
+				}
+				else
+					err(5);
+			}
+			else if(n1 == "int")
+			{		
 				if(n2 == "int" || n2 == "float" || n2 == "array"|| n2 == "pointer")
 					warning(ret,left->t);
 				else
 					err(5);
 			}
-			else if(n1 == "int"){
-					
-				if(n2 == "int" || n2 == "float" || n2 == "array"|| n2 == "pointer")
-					warning(ret,left->t);
-				else
-					err(5);
-			}
-			else if(n1 == "float"){
-					
+			else if(n1 == "float")
+			{		
 				if(n2 == "int" || n2 == "float")
 					warning(ret,left->t);
 				else
@@ -927,10 +950,15 @@ class id_astnode : public ref_astnode
 		{
 			ref_name = "Id";
 			id_name = name;
-			if(top_local->InScope(name)==0)
+			if(ptr!=1)
 			{
-				err(9);
+				if(top_local->InScope(name)==0)
+				{
+					err(9,name);
+				}
 			}
+			else
+				ptr=0;
 			for (int i = 0; i < (top_local->table).size(); ++i)
 			{
 				if((top_local->table[i])->name==id_name)

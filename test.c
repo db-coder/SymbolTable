@@ -1,21 +1,20 @@
-struct s
-{
-	float y,z;
-};
+int returnInt () {
+    return 1;
+}
 
-struct d
-{
-	float y,z;
-};
+int main() {
+    int a;
+    int b;
+    int c[3];
 
-int main(int argc)
-{
-	struct s a,z;
-	int x[5];
-	int *b;
-	int c;
-	c=1+2;
-	b=*b+1;
-	*b=c;
-	return 0;
+    a = 2;
+    b = 4;
+	
+    &a = &b;
+	
+    *(&a) = b; 
+
+    c[ "Compilers" ] = 4;
+
+    c[ returnInt() ] = 1;
 }
