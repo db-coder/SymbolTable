@@ -107,6 +107,7 @@ bool equal(type *t1, type *t2) //check, seriously!
 		if(code == 4)cerr << "function not found";
 		if(code == 5)cerr << "Incompatible types";
 		if(code == 6)cerr << "Invalid operands";
+		if(code == 7)cerr << " lvalue required as left operand of assignment";
 		if(code == 10)cerr << "subscripted value is neither array nor pointer nor vector";
 		if(code == 11)cerr << "Symbol not a member of struct";
 		if(code == 12)cerr << "Symbol not a pointer";
@@ -305,14 +306,18 @@ class globalSymTab
 					ret = 2;
 					for(int j = 0; j <para_type.size(); j++)
 					{
-						if(!equal(para_type[j], (table[i])->params[j]))
+						if((para_type[j]->name=="int" && table[i]->params[j]->name=="float") || (para_type[j]->name=="float" && table[i]->params[j]->name=="int"))
+							continue;
+						if((para_type[j]->name=="pointer" && table[i]->params[j]->name=="pointer") && (table[i]->params[j]->t)->name=="void")
+							continue;
+						else if(!equal(para_type[j], (table[i])->params[j]))
 						{
 								b = 0;
 								break;
 						}
 					}
-					if(b)return 1;
-
+					if(b)
+						return 1;
 				}
 			}
 			return ret;
@@ -354,12 +359,12 @@ namespace
 
 	globalSymTab *top = new globalSymTab();
 	symTab *top_local = new symTab();
-	string name,name_func;
+	string name,name_func,name_struct;
 	type* type1;
 	type* old_type;
 	type* ret;
 	vector <type*> params;
-	int old_width, width,offset,val,ptr=0;
+	int old_width, width,offset,val,ptr=0,linked=0;
 	
 }
 
@@ -585,34 +590,61 @@ class func_astnode : public exp_astnode  					//CHECK in future!!!
 	private:
 		string val; //identifier
 		vector<exp_astnode*> list;
+		vector<string> types;
 	public:
-		func_astnode(string s){
+		func_astnode(string s)
+		{
 			val = s;
 		}
 		
-		func_astnode(string s, vector <exp_astnode*> a){
+		func_astnode(string s, vector <exp_astnode*> a)
+		{
 			val = s;
 			list = a;
+			symTab * curr = top->symbFunc(s);
+			for (int i = 0; i < list.size(); ++i)
+			{
+				if((list[i]->t)->name=="int" && ((curr->table[i])->t)->name=="float")
+					types.push_back("TO-FLOAT");
+				else if((list[i]->t)->name=="float" && ((curr->table[i])->t)->name=="int")
+					types.push_back("TO-INT");
+				else
+					types.push_back("");
+			}
 			t = top->findtype(val);          //add findtype
 		}
 		virtual int print(int ident)
 		{
 			int x = 0;
 			cout<< "(" <<val <<' ';
-			if(!list.empty()){
-
-			int x = 0, y = 0;
-			list[0]->print(ident+2+val.size());
-			cout<<"\n";
-			cout << string(ident+2+val.size(), ' ');
-			for(int i = 1; i <list.size(); i++)
+			if(!list.empty())
 			{
-				y =list[i]->print(ident+2+val.size());
-				x = max(x,y);
+				int x = 0, y = 0;
+				if(types[0]!="")
+				{
+					cout<<"("<<types[0]<<" ";
+					list[0]->print(ident+2+2+types[0].size()+val.size());
+					cout<<")";
+				}
+				else	
+					list[0]->print(ident+2+val.size());
 				cout<<"\n";
 				cout << string(ident+2+val.size(), ' ');
+				for(int i = 1; i <list.size(); i++)
+				{
+					if(types[i]!="")
+					{
+						cout<<"("<<types[i]<<" ";
+						y =list[i]->print(ident+2+2+types[i].size()+val.size());
+						cout<<")";
+					}
+					else
+						y =list[i]->print(ident+2+val.size());
+					x = max(x,y);
+					cout<<"\n";
+					cout << string(ident+2+val.size(), ' ');
+				}
 			}
-		}
 			cout<<")"; 
 			return x + val.size() + 3;
 		}
@@ -622,7 +654,6 @@ class func_astnode : public exp_astnode  					//CHECK in future!!!
 			vector <type*> vec;
 			for(int i = 0; i <list.size(); i++){
 				vec.push_back(list[i]->t);
-			
 			}
 			int k = top->findFunc(val, vec);
 			if(k == 0)err(8,val);	
@@ -634,16 +665,22 @@ class ass_astnode : public exp_astnode
 {
 	private:
 		exp_astnode * left, *right;
+		string convert;
 	public:
 		ass_astnode(exp_astnode *l, exp_astnode *r)
 		{
 			exp_name = "Ass";
 			left = l;
 			right = r;
+			convert ="";
 
 			string n1 = (l->t)->name;
 			string n2 = (r->t)->name;
-			if(n1 == "array")
+			if(l->exp_name=="PP" || l->exp_name=="&")
+			{
+				err(7);
+			}
+			else if(n1 == "array")
 			{
 				err(13);
 			}
@@ -664,14 +701,18 @@ class ass_astnode : public exp_astnode
 					err(5);
 			}
 			else if(n1 == "int")
-			{					
+			{
+				if(n2 == "float")
+					convert="TO-INT";
 				if(n2 == "int" || n2 == "float" || n2 == "array"|| n2 == "pointer")
 					warning(l->t,r->t);
 				else
 					err(5);
 			}
 			else if(n1 == "float")
-			{					
+			{			
+				if(n2 == "int")
+					convert="TO-FLOAT";		
 				if(n2 == "int" || n2 == "float")
 					warning(l->t,r->t);
 				else
@@ -686,7 +727,17 @@ class ass_astnode : public exp_astnode
 			cout<< "("<<exp_name << ' ';
 			int x = left->print(ident+2+exp_name.size());
 			cout<<' ';
-			int y = right->print(ident + 3 + exp_name.size()+ x);
+			int y;
+			if(convert!="")
+			{
+				cout<<"("<<convert<<" ";
+				y = right->print(ident + 3 + 2 + convert.size() + exp_name.size()+ x);
+				cout<<")";
+				cout<<")"; 
+				return exp_name.size()+x+y+4+3+convert.size();
+			}
+			y = right->print(ident + 3 + exp_name.size()+ x);
+			cout<<")";
 			cout<<")"; 
 			return exp_name.size()+x+y+4;
 		}
@@ -737,17 +788,27 @@ class return_astnode : public stmt_astnode
 {
 	private:
 		exp_astnode * left;
+		string convert;
 	public:
 		return_astnode(exp_astnode *l)
 		{
 			stmt_name = "Return";
 			left = l;
+			convert = "";
 		}
 
 		virtual int print(int ident)
 		{
 			cout<< "("<<stmt_name << ' ';
-			int x = left->print(ident + 2 + stmt_name.size());
+			int x;
+			if(convert!="")
+			{
+				cout<<"("<<convert<<" ";
+				x = left->print(ident + 2 + 2 + convert.size() + stmt_name.size());
+				cout<<"))"; 
+				return x  + stmt_name.size() + 3 + 3 + convert.size();
+			}
+			x = left->print(ident + 2 + stmt_name.size());
 			cout<<")"; 
 			return x  + stmt_name.size() + 3;
 		}
@@ -778,13 +839,17 @@ class return_astnode : public stmt_astnode
 			}
 			else if(n1 == "int")
 			{		
+				if(n2 == "float")
+					convert="TO-INT";
 				if(n2 == "int" || n2 == "float" || n2 == "array"|| n2 == "pointer")
 					warning(ret,left->t);
 				else
 					err(5);
 			}
 			else if(n1 == "float")
-			{		
+			{	
+				if(n2 == "int")
+					convert="TO-FLOAT";	
 				if(n2 == "int" || n2 == "float")
 					warning(ret,left->t);
 				else

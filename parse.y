@@ -33,10 +33,15 @@ translation_unit
         ;
 
 struct_specifier 
-        : { top_local = new symTab();}STRUCT IDENTIFIER '{' declaration_list '}' ';'
+        : { top_local = new symTab();}STRUCT IDENTIFIER 
+        {
+        	name_struct = $3;
+        }
+        '{' declaration_list '}' ';'
         { 
         	if(top->findStruct($3))err(1);
 			top->put($3,top_local->total_width(),0,new base_type("STRUCT"),top_local);
+			name_struct="";
 		}
         ;
 
@@ -55,14 +60,13 @@ function_definition
 			}
 		}
 		offset = 0;
-	} 
-	compound_statement 
-	{ 
 		if(!params.empty())
 			top->put(name_func,top_local->total_width(),0,ret,top_local,params);
 		else
 			top->put(name_func,top_local->total_width(),0,ret,top_local);
-	}
+	} 
+	compound_statement 
+	{}
 	;
 
 type_specifier                   // This is the information 
@@ -83,10 +87,14 @@ type_specifier                   // This is the information
 		} 
         | STRUCT IDENTIFIER 
         {
-        	if(!top->findStruct($2))err(3,$2);
+        	if(!(top->findStruct($2)) && $2!=name_struct)
+        		err(3,$2);
+        	if($2==name_struct)
+        	{
+        		linked=1;
+        	}
         	type1 = old_type = new base_type($2);
-        	width = old_width = top->struct_size($2);
-        	
+        	width = old_width = top->struct_size($2);  	
         }
         ;
 
@@ -129,7 +137,11 @@ parameter_declaration
 
 declarator
 	: IDENTIFIER 
-	{		
+	{
+		if(linked==1)
+		{
+			err(3,name_struct);
+		}	
 		name = $1;
 		if(top_local->InScope(name))
 		{
@@ -138,6 +150,8 @@ declarator
 	}
 	| declarator '[' primary_expression']' // check separately that it is a constant
 	{		
+		if(linked==1)
+			err(3,name_struct);
 		if(val<0)
 		{
 			cerr<<"Error: Array index should be a positive integer at line number "<<l_no<<endl;
@@ -146,7 +160,14 @@ declarator
 		width*=val;
 		type1 = new array_type(type1);
 	}
-    | '*' declarator 
+    | '*' 
+    {
+    	if(linked==1)
+    	{
+    		linked=2;
+    	}
+    }
+    declarator 
     {
     	type1 = new pointer_type(type1);
     	old_type = new pointer_type(old_type->t);
@@ -157,7 +178,6 @@ primary_expression
         : IDENTIFIER
         {        	
         	$$ = new id_astnode($1);
-
         	for (int i = 0; i < top_local->table.size(); ++i)
         	{
         		if((top_local->table[i])->name==$1)
@@ -446,7 +466,7 @@ l_expression                // A separate non-terminal for l_expressions
 expression_list
         : expression
         {        	
-        	 vector<exp_astnode*> v;
+        	vector<exp_astnode*> v;
         	v.push_back($1);
         	$$= v;
         }
@@ -521,6 +541,7 @@ declarator_list
 	}
 	| declarator_list ',' declarator 
 	{		
+		linked=0;
 		top_local->put(name,width,offset,type1,0);
 		offset+=width;
 		width = old_width;
