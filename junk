@@ -16,7 +16,7 @@ ________________________________________________________________________________
         (f (TO-INT (Member (Id "z") (Id "b")))
            (TO-FLOAT (Member (Id "z") (Id "a")))
            )])
-name: f; return type: void; width: 8; offset: 0; parameters :int float ; symbolTable: 
+name: f; return type: int; width: 8; offset: 0; parameters :int float ; symbolTable: 
 ----------------------------------------------------------------------------------------------------
 	name: m; type: int; width: 4; offset: -8; is_param: 1
 	name: n; type: float; width: 4; offset: -4; is_param: 1
@@ -39,4 +39,9 @@ name: g; return type: int; width: 4; offset: 0; parameters :int ; symbolTable:
 ----------------------------------------------------------------------------------------------------
 	name: a; type: int; width: 4; offset: -4; is_param: 1
 	name: x; type: u; width: 16; offset: 0; is_param: 0
+____________________________________________________________________________________________________
+(Block [(Ass (Id "x") (h )))])
+name: h; return type: int; width: 0; offset: 0; parameters :; symbolTable: 
+----------------------------------------------------------------------------------------------------
+	name: x; type: int; width: 4; offset: 0; is_param: 0
 ____________________________________________________________________________________________________

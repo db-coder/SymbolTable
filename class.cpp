@@ -595,6 +595,7 @@ class func_astnode : public exp_astnode  					//CHECK in future!!!
 		func_astnode(string s)
 		{
 			val = s;
+			t = top->findtype(val);
 		}
 		
 		func_astnode(string s, vector <exp_astnode*> a)
