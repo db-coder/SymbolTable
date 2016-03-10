@@ -36,11 +36,12 @@ struct_specifier
         : { top_local = new symTab();}STRUCT IDENTIFIER 
         {
         	name_struct = $3;
-        }
-        '{' declaration_list '}' ';'
-        { 
         	if(top->findStruct($3))err(1);
 			top->put($3,top_local->total_width(),0,new base_type("STRUCT"),top_local);
+       	}
+        '{' declaration_list '}' ';'
+        { 
+        	
 			name_struct="";
 		}
         ;

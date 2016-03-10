@@ -26,8 +26,7 @@ int g(int a) {
     struct u x;
     return 1.9;
 }
-int h()
+struct u h()
 {
     int x;
-    x = h();
 }
