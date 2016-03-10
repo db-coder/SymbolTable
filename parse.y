@@ -152,8 +152,9 @@ declarator
 	{		
 		if(linked==1)
 			err(3,name_struct);
+		if(($3)->exp_name != "intconst")err(16);
 		width*=val;
-		type1 = new array_type(type1);
+		type1 = new array_type(type1, val);
 	}
     | '*' 
     {

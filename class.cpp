@@ -12,6 +12,7 @@ class type {
 	public:
 		string name;
 		type *t;
+		int dim;
 		virtual void print()
 		{
 			cout << name ;
@@ -31,11 +32,11 @@ class type {
 class array_type : public type
 {
 	public:
-		int dim;
-		array_type(type *t1)
+		array_type(type *t1, int val)
 		{
 			name = "array";
 			t = t1;
+			dim = val;
 		}
 };
 
@@ -98,6 +99,17 @@ bool equal(type *t1, type *t2) //check, seriously!
 		return 1;
 	}
 
+	bool eqArray(type *a1, type* a2)
+	{
+		type * t1= a1->t;
+		type * t2= a2->t;
+		if(!equal(a1,a2))return 0;
+		while(t1 !=0 && t2 !=0)
+		{
+			if(t1->dim != t2->dim)return 0;
+		}
+		return 1;
+	}
 	void err(int code)
 	{
 		cerr << "Error at line number "<<l_no<<" : ";
@@ -116,6 +128,8 @@ bool equal(type *t1, type *t2) //check, seriously!
 		if(code == 13)cerr << "Assignment to array not allowed";
 		if(code == 14)cerr << "Indexing into an element which is not an array";
 		if(code == 15)cerr << "Array index should be a non-negative integer";
+		if(code == 16)cerr << "Size of array must be an integer";
+		if(code == 17)cerr << "Incompatible array types";
 		cerr<<endl;	
 		exit(0);
 	}
@@ -328,9 +342,13 @@ class globalSymTab
 						}
 						else if(n1 == "array")
 						{
-							if(n2 == "int" || n2 == "pointer" || n2 == "array")
+							if(n2 == "int" || n2 == "pointer")
 							{
 								warning(para_type[j],table[i]->params[j]);
+							}
+							else if( n2 == "array")
+							{
+								if(!eqArray(para_type[j], table[i]->params[j]))err(17);
 							}
 							else
 								err(8,n);

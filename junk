@@ -9,10 +9,9 @@ name: t; return type: STRUCT; width: 1040; offset: 0; symbolTable:
 ----------------------------------------------------------------------------------------------------
 	name: x; type: array of s; width: 1040; offset: 104; is_param: 0
 ____________________________________________________________________________________________________
-(Block [(Return (Id "p"))])
+(Block [(Return (Arrayref(Id "b")[(IntConst 0)]))])
 name: f; return type: pointer to float; width: 200; offset: 0; parameters :pointer array ; symbolTable: 
 ----------------------------------------------------------------------------------------------------
 	name: a; type: pointer to array of int; width: 40; offset: -200; is_param: 1
 	name: b; type: array of array of float; width: 160; offset: -160; is_param: 1
-	name: p; type: pointer to float; width: 4; offset: 0; is_param: 0
 ____________________________________________________________________________________________________

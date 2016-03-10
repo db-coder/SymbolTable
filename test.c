@@ -8,8 +8,7 @@ struct t{
 };
 
 float * f(int * a[10], float b[8][5]) {
-	float *p;
-    return p;
+    return b[0]; 
 }
 
 int main() {
@@ -19,6 +18,7 @@ int main() {
     struct s x;
     struct t y;
     int i;
-    f(c, a);
-    y.x[i].b[2] = x.b[1];
+    f(c, x.b); 
+    f(c, a); 
+    y.x[i].b[2] = x.b[1]; 
 }
