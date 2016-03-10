@@ -16,19 +16,19 @@
 translation_unit 
         :  struct_specifier
         {
-        	//top->printTable();
+        	top->printLast();
 	 	}
 	 	| function_definition 
 	 	{	 	
-	 		top->printTable();
+	 		top->printLast();
 	 	}
 	 	| translation_unit function_definition 
 	 	{	 		
-	 		top->printTable();
+	 		top->printLast();
 	 	}
         | translation_unit {cout<<"";} struct_specifier
         {      	
-	 		top->printTable();
+	 		top->printLast();
 	 	}
         ;
 

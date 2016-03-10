@@ -242,11 +242,11 @@ class globalSymTab
 			table.push_back(x);
 		}
 		
-		void printTable()
+		void printLast()
 		{
 			cout<<endl;
-			for (int i = 0; i < table.size(); ++i)
-			{
+			int i = table.size()-1;
+			
 				cout<<"name: "<<table[i]->name<<"; return type: ";
 				(table[i]->t)->print();
 				cout<<"; width: "<<table[i]->width<<"; offset: "<<table[i]->offset;
@@ -263,7 +263,7 @@ class globalSymTab
 
 				(table[i]->table)->print();
 				cout<<string(100,'_')<<endl;
-			}
+			
 		}
 		int struct_size(string s)
 		{
@@ -814,7 +814,7 @@ class return_astnode : public stmt_astnode
 		}
 		void validate(type * ret)
 		{
-			top_local->print();
+			//top_local->print();
 			string n1 = ret->name;
 			string n2 = (left->t)->name;
 			if(n1 == "array")

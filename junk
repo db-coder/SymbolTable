@@ -4,6 +4,7 @@ name: s; return type: STRUCT; width: 8; offset: 0; symbolTable:
 	name: a; type: int; width: 4; offset: 0; is_param: 0
 	name: b; type: float; width: 4; offset: 4; is_param: 0
 ____________________________________________________________________________________________________
+
 name: t; return type: STRUCT; width: 8; offset: 0; symbolTable: 
 ----------------------------------------------------------------------------------------------------
 	name: a; type: int; width: 4; offset: 8; is_param: 0
@@ -15,16 +16,6 @@ ________________________________________________________________________________
         (f (TO-INT (Member (Id "z") (Id "b")))
            (TO-FLOAT (Member (Id "z") (Id "a")))
            )])
-name: s; return type: STRUCT; width: 8; offset: 0; symbolTable: 
-----------------------------------------------------------------------------------------------------
-	name: a; type: int; width: 4; offset: 0; is_param: 0
-	name: b; type: float; width: 4; offset: 4; is_param: 0
-____________________________________________________________________________________________________
-name: t; return type: STRUCT; width: 8; offset: 0; symbolTable: 
-----------------------------------------------------------------------------------------------------
-	name: a; type: int; width: 4; offset: 8; is_param: 0
-	name: b; type: float; width: 4; offset: 12; is_param: 0
-____________________________________________________________________________________________________
 name: f; return type: void; width: 8; offset: 0; parameters :int float ; symbolTable: 
 ----------------------------------------------------------------------------------------------------
 	name: m; type: int; width: 4; offset: -8; is_param: 1
@@ -37,63 +28,13 @@ name: f; return type: void; width: 8; offset: 0; parameters :int float ; symbolT
 	name: q; type: float; width: 4; offset: 32; is_param: 0
 ____________________________________________________________________________________________________
 
-name: s; return type: STRUCT; width: 8; offset: 0; symbolTable: 
-----------------------------------------------------------------------------------------------------
-	name: a; type: int; width: 4; offset: 0; is_param: 0
-	name: b; type: float; width: 4; offset: 4; is_param: 0
-____________________________________________________________________________________________________
-name: t; return type: STRUCT; width: 8; offset: 0; symbolTable: 
-----------------------------------------------------------------------------------------------------
-	name: a; type: int; width: 4; offset: 8; is_param: 0
-	name: b; type: float; width: 4; offset: 12; is_param: 0
-____________________________________________________________________________________________________
-name: f; return type: void; width: 8; offset: 0; parameters :int float ; symbolTable: 
-----------------------------------------------------------------------------------------------------
-	name: m; type: int; width: 4; offset: -8; is_param: 1
-	name: n; type: float; width: 4; offset: -4; is_param: 1
-	name: x; type: s; width: 8; offset: 0; is_param: 0
-	name: y; type: s; width: 8; offset: 8; is_param: 0
-	name: z; type: t; width: 8; offset: 16; is_param: 0
-	name: p; type: int; width: 4; offset: 24; is_param: 0
-	name: r; type: int; width: 4; offset: 28; is_param: 0
-	name: q; type: float; width: 4; offset: 32; is_param: 0
-____________________________________________________________________________________________________
 name: u; return type: STRUCT; width: 16; offset: 0; symbolTable: 
 ----------------------------------------------------------------------------------------------------
 	name: a; type: pointer to s; width: 8; offset: 36; is_param: 0
 	name: b; type: pointer to t; width: 8; offset: 44; is_param: 0
 	name: c; type: pointer to u; width: 0; offset: 52; is_param: 0
 ____________________________________________________________________________________________________
-	name: a; type: int; width: 4; offset: -4; is_param: 1
-	name: x; type: u; width: 16; offset: 0; is_param: 0
 (Block [(Return (TO-INT (FloatConst 1.9)))])
-name: s; return type: STRUCT; width: 8; offset: 0; symbolTable: 
-----------------------------------------------------------------------------------------------------
-	name: a; type: int; width: 4; offset: 0; is_param: 0
-	name: b; type: float; width: 4; offset: 4; is_param: 0
-____________________________________________________________________________________________________
-name: t; return type: STRUCT; width: 8; offset: 0; symbolTable: 
-----------------------------------------------------------------------------------------------------
-	name: a; type: int; width: 4; offset: 8; is_param: 0
-	name: b; type: float; width: 4; offset: 12; is_param: 0
-____________________________________________________________________________________________________
-name: f; return type: void; width: 8; offset: 0; parameters :int float ; symbolTable: 
-----------------------------------------------------------------------------------------------------
-	name: m; type: int; width: 4; offset: -8; is_param: 1
-	name: n; type: float; width: 4; offset: -4; is_param: 1
-	name: x; type: s; width: 8; offset: 0; is_param: 0
-	name: y; type: s; width: 8; offset: 8; is_param: 0
-	name: z; type: t; width: 8; offset: 16; is_param: 0
-	name: p; type: int; width: 4; offset: 24; is_param: 0
-	name: r; type: int; width: 4; offset: 28; is_param: 0
-	name: q; type: float; width: 4; offset: 32; is_param: 0
-____________________________________________________________________________________________________
-name: u; return type: STRUCT; width: 16; offset: 0; symbolTable: 
-----------------------------------------------------------------------------------------------------
-	name: a; type: pointer to s; width: 8; offset: 36; is_param: 0
-	name: b; type: pointer to t; width: 8; offset: 44; is_param: 0
-	name: c; type: pointer to u; width: 0; offset: 52; is_param: 0
-____________________________________________________________________________________________________
 name: g; return type: int; width: 4; offset: 0; parameters :int ; symbolTable: 
 ----------------------------------------------------------------------------------------------------
 	name: a; type: int; width: 4; offset: -4; is_param: 1
