@@ -259,10 +259,10 @@ class globalSymTab
 					}
 				}
 				cout<<"; symbolTable: \n";
-				cout<<string('_',100)<<endl;
+				cout<<string(100,'-')<<endl;
 
 				(table[i]->table)->print();
-				cout<<string('_',100)<<endl;
+				cout<<string(100,'_')<<endl;
 			}
 		}
 		int struct_size(string s)
