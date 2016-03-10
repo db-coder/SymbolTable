@@ -107,12 +107,15 @@ bool equal(type *t1, type *t2) //check, seriously!
 		if(code == 4)cerr << "function not found";
 		if(code == 5)cerr << "Incompatible types";
 		if(code == 6)cerr << "Invalid operands";
-		if(code == 7)cerr << " lvalue required as left operand of assignment";
+		if(code == 7)cerr << "lvalue required as left operand of assignment";
+		if(code == 8)cerr << "lvalue required as unary '&' operand";
+		if(code == 9)cerr << "lvalue required as increment operand";
 		if(code == 10)cerr << "subscripted value is neither array nor pointer nor vector";
 		if(code == 11)cerr << "Symbol not a member of struct";
 		if(code == 12)cerr << "Symbol not a pointer";
 		if(code == 13)cerr << "Assignment to array not allowed";
 		if(code == 14)cerr << "Indexing into an element which is not an array";
+		if(code == 15)cerr << "Array index should be a non-negative integer";
 		cerr<<endl;	
 		exit(0);
 	}
@@ -131,9 +134,14 @@ bool equal(type *t1, type *t2) //check, seriously!
 	void warning(type *n1, type * n2)
 	{
 		if(equal(n1, n2))return;
-		cerr << "Warning: ";
+		cerr << "Warning at line number "<<l_no<<":";
 		cerr << "Assignment from incompatible type "<<n2->name<<" to "<<n1->name;
-		cerr <<" at line number "<<l_no<<endl;	
+		cerr<<endl;	
+	}
+	void warning(int i)
+	{
+		if(i==1)
+			cerr<<"Warning at line number "<<l_no<<": function returns address of local variable."<<endl;
 	}
 }
 class symbols
@@ -281,6 +289,7 @@ class globalSymTab
 				if(table[i]->name == n && (table[i]->t)->name == "STRUCT")
 					return table[i]->table;
 			}
+			cerr<<"err\n";
 			err(1,n);
 			return 0;
 		}
@@ -306,15 +315,42 @@ class globalSymTab
 					ret = 2;
 					for(int j = 0; j <para_type.size(); j++)
 					{
-						if((para_type[j]->name=="int" && table[i]->params[j]->name=="float") || (para_type[j]->name=="float" && table[i]->params[j]->name=="int"))
-							continue;
-						if((para_type[j]->name=="pointer" && table[i]->params[j]->name=="pointer") && (table[i]->params[j]->t)->name=="void")
-							continue;
-						else if(!equal(para_type[j], (table[i])->params[j]))
+						string n1 = para_type[j]->name;
+						string n2 = table[i]->params[j]->name;
+						if(n1 == "pointer")
 						{
-								b = 0;
-								break;
+							if(n2 == "int" || n2 == "pointer" || n2 == "array")
+							{
+								warning(para_type[j],table[i]->params[j]);
+							}
+							else
+								err(8,n);
 						}
+						else if(n1 == "array")
+						{
+							if(n2 == "int" || n2 == "pointer" || n2 == "array")
+							{
+								warning(para_type[j],table[i]->params[j]);
+							}
+							else
+								err(8,n);
+						}
+						else if(n1 == "int")
+						{		
+							if(n2 == "int" || n2 == "float" || n2 == "array"|| n2 == "pointer")
+								warning(para_type[j],table[i]->params[j]);
+							else
+								err(8,n);
+						}
+						else if(n1 == "float")
+						{	
+							if(n2 == "int" || n2 == "float")
+								warning(para_type[j],table[i]->params[j]);
+							else
+								err(8,n);
+						}
+						else if(n1 != n2)
+							err(8,n);
 					}
 					if(b)
 						return 1;
@@ -349,6 +385,7 @@ class globalSymTab
 			for(int i = 0; i <table.size(); i++)
 				if(table[i]->name == s)
 					return table[i]->t;
+			cerr<<"err\n";
 			err(1,s);
 
 		}
@@ -356,7 +393,6 @@ class globalSymTab
 
 namespace
 {
-
 	globalSymTab *top = new globalSymTab();
 	symTab *top_local = new symTab();
 	string name,name_func,name_struct;
@@ -372,6 +408,7 @@ class abstract_astnode
 {
 	public:
 		type *t;
+		bool lvalue;
 		virtual int print (int ident) = 0;
 		// virtual int value () = 0;
 		// virtual string generate_code(const symbolTable&) = 0;
@@ -409,6 +446,7 @@ class unary_astnode : public exp_astnode
 			exp_name = s;
 			if(s=="*")
 			{
+				lvalue = true;
 				if(l->t == 0 || (l->t)->name!="pointer")
 					err(2, "*");
 				else
@@ -416,10 +454,16 @@ class unary_astnode : public exp_astnode
 			}
 			else if(s=="&")
 			{
+				lvalue = false;
+				if(!l->lvalue)
+					err(8);
 				t = new pointer_type(l->t);
 			}
 			else
 			{
+				lvalue = false;
+				if(s=="PP" && !(l->lvalue))
+					err(9);
 				t = l->t;
 			}
 			left = l;
@@ -442,6 +486,7 @@ class binary_astnode : public exp_astnode
 	public:
 		binary_astnode(string s, exp_astnode *l, exp_astnode* r)
 		{
+			lvalue = false;
 			exp_name = s;
 			left = l;
 			right = r;
@@ -539,7 +584,9 @@ class float_astnode : public exp_astnode
 	public:
 		float_astnode(float s)
 		{
+			lvalue = false;
 			val = s; 
+			exp_name = "floatconst";
 			t= new base_type("float");
 		}
 		virtual int print(int ident)
@@ -557,7 +604,9 @@ class int_astnode : public exp_astnode
 	public:
 		int_astnode(int s)
 		{
+			lvalue = false;
 			val = s; 
+			exp_name = "intconst";
 			t = new base_type("int");
 		}
 		virtual int print(int ident)
@@ -575,7 +624,9 @@ class string_astnode : public exp_astnode
 	public:
 		string_astnode(string s)
 		{
+			lvalue = false;
 			val = s;
+			exp_name = "stringconst";
 			t = new base_type("string");
 		}
 		virtual int print(int ident)
@@ -594,12 +645,14 @@ class func_astnode : public exp_astnode  					//CHECK in future!!!
 	public:
 		func_astnode(string s)
 		{
+			lvalue = false;
 			val = s;
 			t = top->findtype(val);
 		}
 		
 		func_astnode(string s, vector <exp_astnode*> a)
 		{
+			lvalue = false;
 			val = s;
 			list = a;
 			symTab * curr = top->symbFunc(s);
@@ -670,6 +723,9 @@ class ass_astnode : public exp_astnode
 	public:
 		ass_astnode(exp_astnode *l, exp_astnode *r)
 		{
+			lvalue = false;
+			if(!(l->lvalue))
+				err(7);
 			exp_name = "Ass";
 			left = l;
 			right = r;
@@ -677,27 +733,16 @@ class ass_astnode : public exp_astnode
 
 			string n1 = (l->t)->name;
 			string n2 = (r->t)->name;
-			if(l->exp_name=="PP" || l->exp_name=="&")
-			{
-				err(7);
-			}
-			else if(n1 == "array")
+			if(n1 == "array")
 			{
 				err(13);
 			}
 			else if(n1 == "pointer")
 			{				
-				if(n2 == "pointer" && ((r->t)->t)->name=="void")
-				{}
-				else if(n2 == "array" || n2 == "pointer")
-				{
-					if(!equal((l->t)->t,(r->t)->t))
-						err(5);
-				}
-				else if(n2 == "int" || n2 == "float")
+				if(n2 == "int" || n2 == "array" || n2 == "pointer")
 				{
 					warning(l->t,r->t);
-				}	
+				}
 				else
 					err(5);
 			}
@@ -752,6 +797,7 @@ class if_astnode : public stmt_astnode
 	public:
 		if_astnode(exp_astnode *l, stmt_astnode * m, stmt_astnode *r)
 		{
+			lvalue = false;
 			stmt_name = "If";
 			left = l;
 			right = r;
@@ -775,7 +821,11 @@ class if_astnode : public stmt_astnode
 class empty_astnode : public stmt_astnode
 {
 	public:
-		empty_astnode(){stmt_name = "Empty";}
+		empty_astnode()
+		{
+			lvalue = false;
+			stmt_name = "Empty";
+		}
 
 		virtual int print(int ident)
 		{
@@ -793,6 +843,7 @@ class return_astnode : public stmt_astnode
 	public:
 		return_astnode(exp_astnode *l)
 		{
+			lvalue = false;
 			stmt_name = "Return";
 			left = l;
 			convert = "";
@@ -824,14 +875,9 @@ class return_astnode : public stmt_astnode
 			}
 			else if(n1 == "pointer")
 			{
-				if(n2 == "pointer" && ((left->t)->t)->name=="void")
-				{}
-				else if(n2 == "array" || n2 == "pointer")
-				{
-					if(!equal(ret->t,(left->t)->t))
-						err(5);
-				}
-				else if(n2 == "int" || n2 == "float")
+				if(n2 == "array")
+					warning(1);
+				if(n2 == "int" || n2 == "pointer" || n2 == "array")
 				{
 					warning(ret,left->t);
 				}
@@ -868,6 +914,7 @@ class for_astnode : public stmt_astnode
 	public:
 		for_astnode(exp_astnode *l, exp_astnode *m, exp_astnode *r, stmt_astnode *s)
 		{
+			lvalue = false;
 			stmt_name = "For";
 			left = l;
 			middle = m;
@@ -901,6 +948,7 @@ class while_astnode : public stmt_astnode
 	public:
 		while_astnode(exp_astnode *l, stmt_astnode *s)
 		{
+			lvalue = false;
 			stmt_name = "While";
 			left = l;
 			stmt = s;
@@ -926,11 +974,13 @@ class list_astnode : public stmt_astnode
 	public:
 		list_astnode(stmt_astnode *s)
 		{
+			lvalue = false;
 			stmt = s;
 			list = 0;
 		}
 		list_astnode(stmt_astnode *s, stmt_astnode *l)
 		{
+			lvalue = false;
 			stmt = s;
 			list = l;
 		}
@@ -957,6 +1007,7 @@ class block_astnode : public stmt_astnode
 	public:
 		block_astnode(stmt_astnode *l)
 		{
+			lvalue = false;
 			stmt_name = "Block";
 			block = l;
 		}
@@ -1014,6 +1065,7 @@ class id_astnode : public ref_astnode
 		string id_name;
 		id_astnode(string name)
 		{
+			lvalue = true;
 			ref_name = "Id";
 			id_name = name;
 			if(ptr!=1)
@@ -1047,9 +1099,12 @@ class member_astnode : public ref_astnode
 	public:
 		member_astnode(exp_astnode *a,id_astnode *b)
 		{
+			lvalue = true;
 			id=a;
 			mem=b;
-			symTab* s = top->symbStruct((id->t)->name);
+			type * tp = a->t;
+			while(tp->t !=0)tp = tp->t;
+			symTab* s = top->symbStruct(tp->name);
 			if(!s->InScope(mem->id_name))err(11);
 			t = s->getType(mem->id_name);
 		}
@@ -1073,11 +1128,14 @@ class arrow_astnode : public ref_astnode
 	public:
 		arrow_astnode(exp_astnode *a,id_astnode *b)
 		{
+			lvalue = true;
 			id=a;
 			mem=b;
 			if((id->t)->name != "pointer")err(12); //Not a pointer
 			if((id->t)->t == 0)err(12);
-			symTab* s = top->symbStruct(((id->t)->t)->name);
+			type * tp = a->t;
+			while(tp->t !=0)tp = tp->t;
+			symTab* s = top->symbStruct(tp->name);
 			if(!s->InScope(mem->id_name))err(11);
 			t = s->getType(mem->id_name);
 		}
@@ -1101,6 +1159,7 @@ class arrref_astnode : public ref_astnode
 	public:
 		arrref_astnode(exp_astnode *a,exp_astnode * b)
 		{
+			lvalue = true;
 			id=a;
 			params = b;
 			if((id->t)->name != "array")err(14);
@@ -1117,6 +1176,11 @@ class arrref_astnode : public ref_astnode
 			cout<<"])";
 			return 4+x+y+8;
 		}
+		void validate()
+		{
+			if(params-> t == NULL)err(15);
+			if((params->t)->name != "int")err(15);
+		}
 };		
 
 class ptr_astnode : public exp_astnode
@@ -1126,6 +1190,7 @@ class ptr_astnode : public exp_astnode
 	public:
 		ptr_astnode(ref_astnode *a)
 		{
+			lvalue = false;
 			id=a;
 			t = new pointer_type(a->t);
 		}
@@ -1146,6 +1211,7 @@ class deref_astnode : public ref_astnode
 	public:
 		deref_astnode(ref_astnode *a)
 		{
+			lvalue = true;
 			id=a;
 			t = (a->t)->t;
 		}

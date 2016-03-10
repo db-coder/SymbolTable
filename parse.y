@@ -26,28 +26,25 @@ translation_unit
 	 	{	 		
 	 		top->printLast();
 	 	}
-        | translation_unit {cout<<"";} struct_specifier
+        | translation_unit struct_specifier
         {      	
 	 		top->printLast();
 	 	}
         ;
 
 struct_specifier 
-        : { top_local = new symTab();}STRUCT IDENTIFIER 
-        {
-        	name_struct = $3;
-        	if(top->findStruct($3))err(1);
-			top->put($3,top_local->total_width(),0,new base_type("STRUCT"),top_local);
-       	}
-        '{' declaration_list '}' ';'
+        : STRUCT IDENTIFIER '{' 
+        { name_struct = $2;top_local = new symTab();}
+        declaration_list '}' ';'
         { 
-        	
+        	if(top->findStruct($2))err(1);
+			top->put($2,top_local->total_width(),0,new base_type("STRUCT"),top_local);
 			name_struct="";
 		}
         ;
 
 function_definition
-	: {top_local = new symTab();} type_specifier {ret = type1; offset = 0; params.clear();} fun_declarator 
+	: type_specifier { top_local = new symTab();ret = type1; offset = 0; params.clear();} fun_declarator 
 	{
 		if(!params.empty())
 		{
@@ -69,7 +66,9 @@ function_definition
 	compound_statement 
 	{}
 	;
-
+M 
+	: { top_local = new symTab();}
+	;
 type_specifier                   // This is the information 
         : VOID 	                 // that gets associated with each identifier
         {
@@ -153,11 +152,6 @@ declarator
 	{		
 		if(linked==1)
 			err(3,name_struct);
-		if(val<0)
-		{
-			cerr<<"Error: Array index should be a positive integer at line number "<<l_no<<endl;
-			ABORT();
-		}
 		width*=val;
 		type1 = new array_type(type1);
 	}
@@ -171,7 +165,6 @@ declarator
     declarator 
     {
     	type1 = new pointer_type(type1);
-    	old_type = new pointer_type(old_type->t);
     }
     ;
 
@@ -179,16 +172,6 @@ primary_expression
         : IDENTIFIER
         {        	
         	$$ = new id_astnode($1);
-        	for (int i = 0; i < top_local->table.size(); ++i)
-        	{
-        		if((top_local->table[i])->name==$1)
-        		{
-        			if(((top_local->table[i])->t)->name=="int")
-        				val=1;
-        			else
-        				val=-1;
-        		}
-        	}
         }
         | INT_CONSTANT
         {        	
@@ -198,12 +181,10 @@ primary_expression
         | FLOAT_CONSTANT
         {        	
         	$$ = new float_astnode($1);
-        	val=-1;
         }
         | STRING_LITERAL
         {        	
         	$$ = new string_astnode($1);
-        	val=-1;
         }
         | '(' expression ')'
         {        	
@@ -259,7 +240,7 @@ statement
 			$$ = $1;
 		}
         | RETURN expression ';'
-        {        	
+        {       	
         	$$ = new return_astnode($2);
         	($$)->validate(ret);
         }	
@@ -402,13 +383,9 @@ postfix_expression
 	}
     | postfix_expression '[' expression ']'
     {
-    	if(val<0)
-		{
-			cerr<<"Error: Array index should be a positive integer at line number "<<l_no<<endl;
-			ABORT();
-		}
     	if(top_local->InScope($1->exp_name)){cerr << "yo";};
-    	$$ = new arrref_astnode($1, $3);  
+    	$$ = new arrref_astnode($1, $3); 
+    	($$)->validate(); 
     }  
     | postfix_expression '.' IDENTIFIER
     {    	
@@ -434,13 +411,9 @@ l_expression                // A separate non-terminal for l_expressions
         	$$ = new id_astnode($1);
         }
         | l_expression '[' expression ']'
-        {
-        	if(val<0)
-			{
-				cerr<<"Error: Array index should be a positive integer at line number "<<l_no<<endl;
-				ABORT();
-			}        	
-        	$$ = new arrref_astnode($1, $3);  
+        {      	
+        	$$ = new arrref_astnode($1, $3); 
+        	($$)->validate(); 
         }  	
         | '*' l_expression
         {        	
