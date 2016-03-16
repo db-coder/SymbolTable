@@ -19,12 +19,14 @@ class type {
 			if(t != 0)
 			{
 				if(name=="array")
-					cout<<" of ";
+					cout<<" of (" <<dim<<", ";
 				else if(name=="pointer")
 					cout<<" to ";
 				else
 					cout<<" ";
 				t->print();
+				if(name=="array")
+					cout<<")";
 			}
 		}
 };
@@ -61,20 +63,24 @@ class base_type : public type //float, int, void, struct
 };
 namespace
 {
-bool equal(type *t1, type *t2) //check, seriously!
+	string name_func="",name_struct="";
+	bool equal(type *t1, type *t2) //check, seriously!
 	{
-		if(t1 == 0 || t2 == 0)
+		if(t1->t == 0 || t2->t == 0)
 		{
 			if(t1->name=="void" || t2->name=="void")
 				return true;
-			return t1 == t2;
+			return t1->name == t2->name;
 		}
 		else if(t1->name == "pointer")
 		{
 			if(t2->name == "pointer" || t2->name == "array")
-				if(!equal(t1->t,t2->t)){
+			{
+				if(!equal(t1->t,t2->t))
+				{
 					return 0;
-				}
+				}	
+			}
 			else 
 			{
 				return 0;
@@ -83,10 +89,12 @@ bool equal(type *t1, type *t2) //check, seriously!
 		else if(t1->name == "array")
 		{
 			if(t2->name == "pointer" || t2->name == "array")
+			{
 				if(!equal(t1->t,t2->t))
 				{
 					return 0;
-				}	
+				}
+			}	
 			else 
 			{
 				return 0;
@@ -101,18 +109,24 @@ bool equal(type *t1, type *t2) //check, seriously!
 
 	bool eqArray(type *a1, type* a2)
 	{
-		type * t1= a1->t;
-		type * t2= a2->t;
+		type * t1= a1;
+		type * t2= a2;
 		if(!equal(a1,a2))return 0;
-		while(t1 !=0 && t2 !=0)
+		while((t1->t)->t !=0 && (t2->t)->t !=0)
 		{
 			if(t1->dim != t2->dim)return 0;
+			t1=t1->t;
+			t2=t2->t;
 		}
 		return 1;
 	}
 	void err(int code)
 	{
-		cerr << "Error at line number "<<l_no<<" : ";
+		if(name_func!="")
+			cerr << "test.c: In function '"<<name_func<<"':\n";
+		else
+			cerr << "test.c: In struct '"<<name_struct<<"':\n";
+		cerr << "test.c:"<<l_no<<": error: ";
 		if(code == 1)cerr << "struct redeclaration";
 		if(code == 2)cerr << "cannot declare variable of type void";
 		if(code == 3)cerr << "function redefinition";
@@ -122,40 +136,55 @@ bool equal(type *t1, type *t2) //check, seriously!
 		if(code == 7)cerr << "lvalue required as left operand of assignment";
 		if(code == 8)cerr << "lvalue required as unary '&' operand";
 		if(code == 9)cerr << "lvalue required as increment operand";
-		if(code == 10)cerr << "subscripted value is neither array nor pointer nor vector";
-		if(code == 11)cerr << "Symbol not a member of struct";
+		if(code == 10)cerr << "Subscripted value is neither array nor pointer nor vector";
 		if(code == 12)cerr << "Symbol not a pointer";
 		if(code == 13)cerr << "Assignment to array not allowed";
 		if(code == 14)cerr << "Indexing into an element which is not an array";
 		if(code == 15)cerr << "Array index should be a non-negative integer";
-		if(code == 16)cerr << "Size of array must be an integer";
 		if(code == 17)cerr << "Incompatible array types";
 		cerr<<endl;	
 		exit(0);
 	}
 	void err(int code, string s)
 	{
-		cerr << "Error at line number "<<l_no<<" : ";
+		if(name_func!="")
+			cerr << "test.c: In function '"<<name_func<<"':\n";
+		else
+			cerr << "test.c: In struct '"<<name_struct<<"':\n";
+		cerr << "test.c:"<<l_no<<": error: ";
 		if(code == 1)cerr << "Undefined reference to "<<s;
 		if(code == 2)cerr << "Invalid operand to "<<s; 
-		if(code == 3)cerr << "struct "<<s<<" not found";
+		if(code == 3)cerr << "struct '"<<s<<"' not found";
 		if(code == 7)cerr<<"Redeclaration of variable '"<<s<<"'";
 		if(code == 8)cerr<<"Incorrect arguments for function '"<<s<<"'";
 		if(code == 9)cerr << "Using variable '"<<s<<"' without declaration";
+		if(code == 10)cerr << "Size of array '"<<s<<"' has non-integer type";
+		cerr<<endl;	
+		exit(0);
+	}
+	void err(int code, string s, string s2)
+	{
+		if(name_func!="")
+			cerr << "test.c: In function '"<<name_func<<"':\n";
+		else
+			cerr << "test.c: In struct '"<<name_struct<<"':\n";
+		cerr << "test.c:"<<l_no<<": error: ";
+		if(code == 1)cerr << "Symbol '"<<s<<"' not a member of struct '"<<s2<<"'";
 		cerr<<endl;	
 		exit(0);
 	}
 	void warning(type *n1, type * n2)
 	{
 		if(equal(n1, n2))return;
-		cerr << "Warning at line number "<<l_no<<":";
+		cerr << "test.c: In function '"<<name_func<<"':\n";
+		cerr << "test.c:"<<l_no<<": warning: ";
 		cerr << "Assignment from incompatible type "<<n2->name<<" to "<<n1->name;
 		cerr<<endl;	
 	}
 	void warning(int i)
 	{
 		if(i==1)
-			cerr<<"Warning at line number "<<l_no<<": function returns address of local variable."<<endl;
+			cerr << "test.c: In function '"<<name_func<<"':\n"<< "test.c:"<<l_no<<": warning: "<<"function returns address of local variable."<<endl;
 	}
 }
 class symbols
@@ -269,22 +298,22 @@ class globalSymTab
 			cout<<endl;
 			int i = table.size()-1;
 			
-				cout<<"name: "<<table[i]->name<<"; return type: ";
-				(table[i]->t)->print();
-				cout<<"; width: "<<table[i]->width<<"; offset: "<<table[i]->offset;
-				if((table[i]->t)->name!="STRUCT")
+			cout<<"name: "<<table[i]->name<<"; return type: ";
+			(table[i]->t)->print();
+			cout<<"; width: "<<table[i]->width<<"; offset: "<<table[i]->offset;
+			if((table[i]->t)->name!="STRUCT")
+			{
+				cout << "; parameters :";
+				for(int j = 0; j <table[i]->params.size(); j++)
 				{
-					cout << "; parameters :";
-					for(int j = 0; j <table[i]->params.size(); j++)
-					{
-						cout << table[i]->params[j]->name << " ";
-					}
+					cout << table[i]->params[j]->name << " ";
 				}
-				cout<<"; symbolTable: \n";
-				cout<<string(100,'-')<<endl;
+			}
+			cout<<"; symbolTable: \n";
+			cout<<string(100,'-')<<endl;
 
-				(table[i]->table)->print();
-				cout<<string(100,'_')<<endl;
+			(table[i]->table)->print();
+			cout<<string(100,'_')<<endl;
 			
 		}
 		int struct_size(string s)
@@ -413,7 +442,7 @@ namespace
 {
 	globalSymTab *top = new globalSymTab();
 	symTab *top_local = new symTab();
-	string name,name_func,name_struct;
+	string name;
 	type* type1;
 	type* old_type;
 	type* ret;
@@ -449,6 +478,7 @@ class stmt_astnode : public abstract_astnode
 class exp_astnode : public stmt_astnode
 {
 	public:
+		int val;
 		string exp_name;
 		virtual int print(int ident) = 0;
 		virtual void validate(){};
@@ -617,8 +647,6 @@ class float_astnode : public exp_astnode
 
 class int_astnode : public exp_astnode
 {
-	private:
-		int val;
 	public:
 		int_astnode(int s)
 		{
@@ -1123,7 +1151,7 @@ class member_astnode : public ref_astnode
 			type * tp = a->t;
 			while(tp->t !=0)tp = tp->t;
 			symTab* s = top->symbStruct(tp->name);
-			if(!s->InScope(mem->id_name))err(11);
+			if(!s->InScope(mem->id_name))err(1,mem->id_name,tp->name);
 			t = s->getType(mem->id_name);
 		}
 
@@ -1154,7 +1182,7 @@ class arrow_astnode : public ref_astnode
 			type * tp = a->t;
 			while(tp->t !=0)tp = tp->t;
 			symTab* s = top->symbStruct(tp->name);
-			if(!s->InScope(mem->id_name))err(11);
+			if(!s->InScope(mem->id_name))err(1,mem->id_name,tp->name);
 			t = s->getType(mem->id_name);
 		}
 

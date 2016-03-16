@@ -1,24 +1,22 @@
 struct s {
     int a;
-    float b[5][5];
+    float b;
 };
-
-struct t{
-    struct s x[10];
+struct t {
+    int a;
+    float b;
 };
-
-float * f(int * a[10], float b[8][5]) {
-    return b[0]; 
-}
-
-int main() {
-    float a[10][10];
-    int b[10][10];
-    int * c[5];
+void f(int m, float n) {
     struct s x;
-    struct t y;
-    int i;
-    f(c, x.b); 
-    f(c, a); 
-    y.x[i].b[2] = x.b[1]; 
+    struct s y;
+    struct t z;
+    int p;
+    int q;
+    x = y;
+    x.b = p;
+    q = 1.0 + z.a;
+    f(z.b, z.a);
+}
+int g(int a) {
+    f(1, 0.1);
 }

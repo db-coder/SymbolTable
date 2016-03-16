@@ -9,7 +9,7 @@
 %type<EXPAST> expression logical_and_expression equality_expression relational_expression additive_expression multiplicative_expression unary_expression primary_expression constant_expression logical_or_expression postfix_expression
 %type<STMAST> compound_statement statement selection_statement iteration_statement statement_list assignment_statement
 %type<LIST> expression_list
-%type<REFAST> declarator l_expression parameter_declaration
+%type<REFAST> declarator parameter_declaration
 
 %%
 
@@ -34,7 +34,11 @@ translation_unit
 
 struct_specifier 
         : STRUCT IDENTIFIER '{' 
-        { name_struct = $2;top_local = new symTab();}
+        { 
+        	name_struct = $2;
+        	name_func = "";
+        	top_local = new symTab();
+        }
         declaration_list '}' ';'
         { 
         	if(top->findStruct($2))err(1);
@@ -66,9 +70,7 @@ function_definition
 	compound_statement 
 	{}
 	;
-M 
-	: { top_local = new symTab();}
-	;
+
 type_specifier                   // This is the information 
         : VOID 	                 // that gets associated with each identifier
         {
@@ -122,12 +124,20 @@ parameter_list
 		top_local->put(name,width,offset,type1,1);
 		offset+=width;
 		params.push_back(type1);
+		while(type1 !=0)
+		{
+			type1=type1->t;
+		}
 	}
 	| parameter_list ',' parameter_declaration 
 	{		
 		top_local->put(name,width,offset,type1,1);
 		offset+=width;
 		params.push_back(type1);
+		while(type1 !=0)
+		{
+			type1=type1->t;
+		}
 	}
 	;
 
@@ -152,9 +162,9 @@ declarator
 	{		
 		if(linked==1)
 			err(3,name_struct);
-		if(($3)->exp_name != "intconst")err(16);
-		width*=val;
-		type1 = new array_type(type1, val);
+		if(($3)->exp_name != "intconst")err(10,name);
+		width*=($3)->val;
+		type1 = new array_type(type1, ($3)->val);
 	}
     | '*' 
     {
@@ -406,38 +416,6 @@ postfix_expression
 	}			
 	;
 
-l_expression                // A separate non-terminal for l_expressions
-        : IDENTIFIER
-        {        	
-        	$$ = new id_astnode($1);
-        }
-        | l_expression '[' expression ']'
-        {      	
-        	$$ = new arrref_astnode($1, $3); 
-        	($$)->validate(); 
-        }  	
-        | '*' l_expression
-        {        	
-        	$$ = new deref_astnode($2);
-        }
-        | l_expression '.' IDENTIFIER
-        {   
-        	ptr=1;     	
-        	id_astnode *x = new id_astnode($3);
-	        $$ = new member_astnode($1,x);
-	    }
-        | l_expression PTR_OP IDENTIFIER
-        {  
-        	ptr=1;      	
-        	id_astnode *x = new id_astnode($3);
-	        $$ = new arrow_astnode($1,x);
-	    }
-        | '(' l_expression ')'
-        {        	
-        	$$ = $2;
-        }	
-        ;
-
 expression_list
         : expression
         {        	
@@ -510,6 +488,10 @@ declarator_list
 		if(type1->name=="void")	
 			err(2);
 		top_local->put(name,width,offset,type1,0);
+		while(type1 !=0)
+		{
+			type1=type1->t;
+		}
 		offset+=width;
 		width = old_width;
 		type1 = old_type;
@@ -518,6 +500,10 @@ declarator_list
 	{		
 		linked=0;
 		top_local->put(name,width,offset,type1,0);
+		while(type1 !=0)
+		{
+			type1=type1->t;
+		}
 		offset+=width;
 		width = old_width;
 		type1 = old_type;
